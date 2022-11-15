@@ -33,11 +33,11 @@ protected:
         m_handler = handler;
     }
 
-    void EmitEvent( wxEvent &event ) const
+    bool EmitEvent( wxEvent &event ) const
     {
         wxWindow *handler = GetHandler();
         event.SetEventObject( handler );
-        handler->HandleWindowEvent( event );
+        return handler->HandleWindowEvent( event );
     }
 
     virtual Handler *GetHandler() const
@@ -81,6 +81,11 @@ public:
         else
             return wxQtSignalHandler< Handler >::GetHandler();
     }
+
+    // Hack used by wxTextEntry derived classes (by specializing this function)
+    // to toggle the dialog's default button off and on on focus events.
+    // see src/qt/textentry.cpp for the reason.
+    void ToggleDefaultButtonOnFocusEvent() { }
 
 protected:
     /* Not implemented here: wxHelpEvent, wxIdleEvent wxJoystickEvent,
@@ -144,6 +149,8 @@ protected:
         if ( !this->GetHandler() )
             return;
 
+        ToggleDefaultButtonOnFocusEvent();
+
         if ( !this->GetHandler()->QtHandleFocusEvent(this, event) )
             Widget::focusInEvent(event);
         else
@@ -155,6 +162,8 @@ protected:
     {
         if ( !this->GetHandler() )
             return;
+
+        ToggleDefaultButtonOnFocusEvent();
 
         if ( !this->GetHandler()->QtHandleFocusEvent(this, event) )
             Widget::focusOutEvent(event);
@@ -456,6 +465,30 @@ protected:
 
         }
     }
+};
+
+// RAII wrapper for blockSignals(). It blocks signals in its constructor and in
+// the destructor it restores the state to what it was before the constructor ran.
+class wxQtEnsureSignalsBlocked
+{
+public:
+    // Use QObject instead of QWidget to avoid including <QWidget> from here.
+    wxQtEnsureSignalsBlocked(QObject *widget) :
+        m_widget(widget)
+    {
+        m_restore = m_widget->blockSignals(true);
+    }
+
+    ~wxQtEnsureSignalsBlocked()
+    {
+        m_widget->blockSignals(m_restore);
+    }
+
+private:
+    QObject* const m_widget;
+    bool m_restore;
+
+    wxDECLARE_NO_COPY_CLASS(wxQtEnsureSignalsBlocked);
 };
 
 #endif
