@@ -1122,9 +1122,7 @@ enable_cxx11
 with_cxx
 enable_stl
 enable_std_containers
-enable_std_containers_compat
 enable_std_iostreams
-enable_std_string
 enable_std_string_conv_in_wxstring
 enable_unsafe_conv_in_wxstring
 enable_utf8
@@ -2090,9 +2088,7 @@ Optional Features:
   --enable-cxx11          obsolete option doing nothing
   --enable-stl            use standard C++ classes for everything
   --enable-std_containers use standard C++ container classes
-  --enable-std_containers_compat     use standard C++ container classes when it can be done compatible
-  --enable-std_iostreams  use standard C++ stream classes
-  --enable-std_string     use standard C++ string classes
+  --disable-std_iostreams  disable use of standard C++ stream classes
  --enable-std_string_conv_in_wxstring     provide implicit conversion to std::string in wxString
  --disable-unsafe_conv_in_wxstring        disable unsafe implicit conversions in wxString
   --enable-utf8           use UTF-8 representation for strings (Unix only)
@@ -3849,8 +3845,6 @@ SAMPLES_RPATH_FLAG=
 DYLIB_RPATH_INSTALL=
 DYLIB_RPATH_POSTLINK=
 
-DEFAULT_STD_FLAG=yes
-
 case "${host}" in
   *-hp-hpux* )
     USE_HPUX=1
@@ -4045,9 +4039,6 @@ esac
 DEFAULT_wxUSE_ALL_FEATURES=yes
 
 DEFAULT_wxUSE_STD_CONTAINERS=no
-DEFAULT_wxUSE_STD_CONTAINERS_COMPATIBLY=$DEFAULT_STD_FLAG
-DEFAULT_wxUSE_STD_IOSTREAM=$DEFAULT_STD_FLAG
-DEFAULT_wxUSE_STD_STRING=$DEFAULT_STD_FLAG
 
 DEFAULT_wxUSE_DMALLOC=no
 DEFAULT_wxUSE_LIBCURL=auto
@@ -5662,9 +5653,6 @@ fi
 
 if test "$wxUSE_STL" = "yes"; then
     DEFAULT_wxUSE_STD_CONTAINERS=yes
-    DEFAULT_wxUSE_STD_CONTAINERS_COMPATIBLY=yes
-    DEFAULT_wxUSE_STD_IOSTREAM=yes
-    DEFAULT_wxUSE_STD_STRING=yes
 fi
 
           enablestring=
@@ -5696,36 +5684,7 @@ fi
           eval "$wx_cv_use_std_containers"
 
 
-          enablestring=
-          defaultval=
-          if test -z "$defaultval"; then
-              if test x"$enablestring" = xdisable; then
-                  defaultval=yes
-              else
-                  defaultval=no
-              fi
-          fi
-
-          # Check whether --enable-std_containers_compat was given.
-if test "${enable_std_containers_compat+set}" = set; then :
-  enableval=$enable_std_containers_compat;
-                          if test "$enableval" = yes; then
-                            wx_cv_use_std_containers_compat='wxUSE_STD_CONTAINERS_COMPATIBLY=yes'
-                          else
-                            wx_cv_use_std_containers_compat='wxUSE_STD_CONTAINERS_COMPATIBLY=no'
-                          fi
-
-else
-
-                          wx_cv_use_std_containers_compat='wxUSE_STD_CONTAINERS_COMPATIBLY=${'DEFAULT_wxUSE_STD_CONTAINERS_COMPATIBLY":-$defaultval}"
-
-fi
-
-
-          eval "$wx_cv_use_std_containers_compat"
-
-
-          enablestring=
+          enablestring=disable
           defaultval=
           if test -z "$defaultval"; then
               if test x"$enablestring" = xdisable; then
@@ -5752,35 +5711,6 @@ fi
 
 
           eval "$wx_cv_use_std_iostreams"
-
-
-          enablestring=
-          defaultval=
-          if test -z "$defaultval"; then
-              if test x"$enablestring" = xdisable; then
-                  defaultval=yes
-              else
-                  defaultval=no
-              fi
-          fi
-
-          # Check whether --enable-std_string was given.
-if test "${enable_std_string+set}" = set; then :
-  enableval=$enable_std_string;
-                          if test "$enableval" = yes; then
-                            wx_cv_use_std_string='wxUSE_STD_STRING=yes'
-                          else
-                            wx_cv_use_std_string='wxUSE_STD_STRING=no'
-                          fi
-
-else
-
-                          wx_cv_use_std_string='wxUSE_STD_STRING=${'DEFAULT_wxUSE_STD_STRING":-$defaultval}"
-
-fi
-
-
-          eval "$wx_cv_use_std_string"
 
 
           enablestring=
@@ -33006,51 +32936,6 @@ _ACEOF
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for round" >&5
-$as_echo_n "checking for round... " >&6; }
-if ${wx_cv_func_round+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-
-ac_ext=cpp
-ac_cpp='$CXXCPP $CPPFLAGS'
-ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
-
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <math.h>
-int
-main ()
-{
-return int(round(0.0))
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-  wx_cv_func_round=yes
-else
-  wx_cv_func_round=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $wx_cv_func_round" >&5
-$as_echo "$wx_cv_func_round" >&6; }
-if test "$wx_cv_func_round" = yes; then
-    $as_echo "#define HAVE_ROUND 1" >>confdefs.h
-
-fi
-
 if test "$TOOLKIT" != "MSW"; then
 
 if test "$wxUSE_LIBICONV" != "no" ; then
@@ -35728,11 +35613,7 @@ if test "$wxUSE_DEBUG_FLAG" = "no" ; then
     WXCONFIG_CPPFLAGS="$WXCONFIG_CPPFLAGS -DwxDEBUG_LEVEL=0"
 
     if test "$wxUSE_GTK" = 1 ; then
-        if test "$WXGTK2" = 1 ; then
-            CPPFLAGS="$CPPFLAGS -DG_DISABLE_CAST_CHECKS"
-        else
-            CPPFLAGS="-DGTK_NO_CHECK_CASTS $CPPFLAGS"
-        fi
+        CPPFLAGS="$CPPFLAGS -DG_DISABLE_CAST_CHECKS"
     fi
 fi
 
@@ -36999,7 +36880,7 @@ if test "$wxUSE_SOUND" = "yes"; then
   SAMPLES_SUBDIRS="$SAMPLES_SUBDIRS sound"
 fi
 
-if test "$WXGTK2" = 1; then
+if test "$wxUSE_GTK" = 1; then
     if test "$wxUSE_PRINTING_ARCHITECTURE" = "yes" ; then
 
         if test "$wxUSE_GTKPRINT" = "yes" ; then
@@ -37599,18 +37480,8 @@ if test "$wxUSE_STD_CONTAINERS" = "yes"; then
 
 fi
 
-if test "$wxUSE_STD_CONTAINERS_COMPATIBLY" = "yes"; then
-  $as_echo "#define wxUSE_STD_CONTAINERS_COMPATIBLY 1" >>confdefs.h
-
-fi
-
 if test "$wxUSE_STD_IOSTREAM" = "yes"; then
   $as_echo "#define wxUSE_STD_IOSTREAM 1" >>confdefs.h
-
-fi
-
-if test "$wxUSE_STD_STRING" = "yes"; then
-  $as_echo "#define wxUSE_STD_STRING 1" >>confdefs.h
 
 fi
 
@@ -41203,12 +41074,8 @@ TOOLKIT_LOWERCASE=`echo $TOOLKIT | tr '[A-Z]' '[a-z]'`
 case "$TOOLKIT" in
     GTK)
         TOOLKIT_DESC="GTK+"
-        if test "$WXGTK2" = 1; then
-            if test "$WXGTK3" = 1; then
-                TOOLKIT_DESC="$TOOLKIT_DESC ${TOOLKIT_VERSION}"
-            else
-                TOOLKIT_DESC="$TOOLKIT_DESC 2"
-            fi
+        if test "$wxUSE_GTK" = 1; then
+            TOOLKIT_DESC="$TOOLKIT_DESC ${TOOLKIT_VERSION}"
             if test "$wxUSE_GTKPRINT" = "yes" ; then
                 TOOLKIT_EXTRA="$TOOLKIT_EXTRA GTK+ printing";
             fi

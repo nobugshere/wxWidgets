@@ -174,16 +174,9 @@
 
 #define wxUSE_STL 0
 
-#define wxUSE_STD_DEFAULT  0
-
-#define wxUSE_STD_CONTAINERS_COMPATIBLY wxUSE_STD_DEFAULT
-
 #define wxUSE_STD_CONTAINERS 0
 
-#define wxUSE_STD_IOSTREAM  wxUSE_STD_DEFAULT
-
-#define wxUSE_STD_STRING  wxUSE_STD_DEFAULT
-
+#define wxUSE_STD_IOSTREAM  0
 #define wxUSE_STD_STRING_CONV_IN_WXSTRING wxUSE_STL
 
 
@@ -861,9 +854,6 @@
 
 /* Define if fsync() is available */
 #undef HAVE_FSYNC
-
-/* Define if round() is available */
-#undef HAVE_ROUND
 
 /* Define if you have ftime() */
 #undef HAVE_FTIME
