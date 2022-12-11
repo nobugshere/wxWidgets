@@ -64,14 +64,12 @@ void wxStringProperty::OnSetValue()
     }
 }
 
-wxStringProperty::~wxStringProperty() { }
-
 wxString wxStringProperty::ValueToString( wxVariant& value,
                                           int argFlags ) const
 {
     wxString s = value.GetString();
 
-    if ( GetChildCount() && HasFlag(wxPG_PROP_COMPOSED_VALUE) )
+    if ( HasAnyChild() && HasFlag(wxPG_PROP_COMPOSED_VALUE) )
     {
         // Value stored in m_value is non-editable, non-full value
         if ( (argFlags & wxPG_FULL_VALUE) ||
@@ -99,7 +97,7 @@ wxString wxStringProperty::ValueToString( wxVariant& value,
 
 bool wxStringProperty::StringToValue( wxVariant& variant, const wxString& text, int argFlags ) const
 {
-    if ( GetChildCount() && HasFlag(wxPG_PROP_COMPOSED_VALUE) )
+    if ( HasAnyChild() && HasFlag(wxPG_PROP_COMPOSED_VALUE) )
         return wxPGProperty::StringToValue(variant, text, argFlags);
 
     if ( variant != text )
@@ -372,8 +370,6 @@ wxIntProperty::wxIntProperty( const wxString& label, const wxString& name,
 }
 #endif
 
-wxIntProperty::~wxIntProperty() { }
-
 wxString wxIntProperty::ValueToString( wxVariant& value,
                                        int WXUNUSED(argFlags) ) const
 {
@@ -609,8 +605,6 @@ wxUIntProperty::wxUIntProperty( const wxString& label, const wxString& name,
     SetValue(wxVariant(value));
 }
 #endif
-
-wxUIntProperty::~wxUIntProperty() { }
 
 wxString wxUIntProperty::ValueToString(wxVariant& value, int argFlags) const
 {
@@ -882,8 +876,6 @@ wxFloatProperty::wxFloatProperty( const wxString& label,
     SetValue(value);
 }
 
-wxFloatProperty::~wxFloatProperty() { }
-
 #if WXWIN_COMPATIBILITY_3_0
 // This helper method provides standard way for floating point-using
 // properties to convert values to string.
@@ -1089,8 +1081,6 @@ wxBoolProperty::wxBoolProperty( const wxString& label, const wxString& name, boo
     m_flags |= wxPG_PROP_USE_DCC;
 }
 
-wxBoolProperty::~wxBoolProperty() { }
-
 wxString wxBoolProperty::ValueToString( wxVariant& value,
                                         int argFlags ) const
 {
@@ -1151,7 +1141,7 @@ bool wxBoolProperty::StringToValue( wxVariant& variant, const wxString& text, in
 
 bool wxBoolProperty::IntToValue( wxVariant& variant, int value, int ) const
 {
-    bool boolValue = value ? true : false;
+    bool boolValue = (bool)value;
 
     if ( variant != boolValue )
     {
@@ -1781,7 +1771,7 @@ long wxFlagsProperty::IdToBit( const wxString& id ) const
 
 void wxFlagsProperty::RefreshChildren()
 {
-    if ( !m_choices.IsOk() || !GetChildCount() ) return;
+    if ( !m_choices.IsOk() || !HasAnyChild() ) return;
 
     int flags = m_value.GetLong();
 
@@ -1855,8 +1845,6 @@ wxDirProperty::wxDirProperty( const wxString& label, const wxString& name, const
     m_flags &= ~wxPG_PROP_ACTIVE_BTN; // Property button enabled only in not read-only mode.
     SetValue(value);
 }
-
-wxDirProperty::~wxDirProperty() { }
 
 wxString wxDirProperty::ValueToString(wxVariant& value, int WXUNUSED(argFlags)) const
 {
@@ -1999,8 +1987,6 @@ wxFileProperty::wxFileProperty( const wxString& label, const wxString& name,
 
     SetValue(value);
 }
-
-wxFileProperty::~wxFileProperty() {}
 
 wxValidator* wxFileProperty::GetClassValidator()
 {
@@ -2226,8 +2212,6 @@ wxLongStringProperty::wxLongStringProperty( const wxString& label, const wxStrin
     m_dlgStyle = wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER | wxCLIP_CHILDREN;
     SetValue(value);
 }
-
-wxLongStringProperty::~wxLongStringProperty() {}
 
 wxString wxLongStringProperty::ValueToString( wxVariant& value,
                                               int WXUNUSED(argFlags) ) const
@@ -2674,8 +2658,6 @@ wxArrayStringProperty::wxArrayStringProperty( const wxString& label,
     m_dlgStyle = wxAEDIALOG_STYLE;
     SetValue( array );
 }
-
-wxArrayStringProperty::~wxArrayStringProperty() { }
 
 void wxArrayStringProperty::OnSetValue()
 {

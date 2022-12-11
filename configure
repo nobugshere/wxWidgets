@@ -2135,8 +2135,8 @@ Optional Features:
   --enable-datetime       use wxDateTime class
   --enable-debugreport    use wxDebugReport class
   --enable-dialupman      use dialup network classes
-  --enable-dynlib         use wxLibrary class for DLL loading
-  --enable-dynamicloader  use (new) wxDynamicLibrary class
+  --enable-dynlib         use wxDynamicLibrary class for DLL loading
+  --enable-dynamicloader  use wxPluginLibrary and wxPluginManager classes
   --enable-exceptions     build exception-safe library
   --enable-ffile          use wxFFile class
   --enable-file           use wxFile class
@@ -25051,6 +25051,26 @@ $as_echo "no" >&6; }
 
 fi
 
+if test "$build" != "$host"; then
+    case "${host}" in
+        *-linux-*)
+            ;;
+
+        *)
+            disable_build_system_pkg_config=1
+            ;;
+    esac
+fi
+
+if test "$disable_build_system_pkg_config" = 1; then
+
+
+                if test -z "$PKG_CONFIG_LIBDIR"; then
+        PKG_CONFIG_LIBDIR=/dev/null
+        export PKG_CONFIG_LIBDIR
+    fi
+fi
+
 
 
 if test "$wxUSE_REGEX" != "no"; then
@@ -35707,8 +35727,13 @@ if test "$wxUSE_UNIX" = "yes"; then
 fi
 
 
-if test "$TOOLKIT" != "MSW"; then
-
+if test "$TOOLKIT" = "MSW"; then
+    if test "$wxUSE_DYNLIB_CLASS" != "yes" ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Not disabling wxDynamicLibrary support required by wxMSW" >&5
+$as_echo "$as_me: WARNING: Not disabling wxDynamicLibrary support required by wxMSW" >&2;}
+        wxUSE_DYNLIB_CLASS=yes
+    fi
+else
     HAVE_DL_FUNCS=0
     HAVE_SHL_FUNCS=0
     if test "$wxUSE_DYNAMIC_LOADER" = "yes" -o "$wxUSE_DYNLIB_CLASS" = "yes" ; then
@@ -35855,8 +35880,8 @@ $as_echo "$as_me: WARNING: Missing dynamic loading support, several features wil
                   wxUSE_DYNAMIC_LOADER=no
                   wxUSE_DYNLIB_CLASS=no
               else
-                  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Assuming wxLibrary class works on this platform" >&5
-$as_echo "$as_me: WARNING: Assuming wxLibrary class works on this platform" >&2;}
+                  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Assuming wxDynamicLibrary class works on this platform" >&5
+$as_echo "$as_me: WARNING: Assuming wxDynamicLibrary class works on this platform" >&2;}
               fi
             fi
         fi
@@ -40106,12 +40131,12 @@ if test -n "$PKG_CONFIG"; then
         pkg_cv_CAIRO_CFLAGS="$CAIRO_CFLAGS"
     else
         if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"cairo\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "cairo") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"cairo >= 1.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "cairo >= 1.2") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_CAIRO_CFLAGS=`$PKG_CONFIG --cflags "cairo" 2>/dev/null`
+  pkg_cv_CAIRO_CFLAGS=`$PKG_CONFIG --cflags "cairo >= 1.2" 2>/dev/null`
 else
   pkg_failed=yes
 fi
@@ -40124,12 +40149,12 @@ if test -n "$PKG_CONFIG"; then
         pkg_cv_CAIRO_LIBS="$CAIRO_LIBS"
     else
         if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"cairo\""; } >&5
-  ($PKG_CONFIG --exists --print-errors "cairo") 2>&5
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"cairo >= 1.2\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "cairo >= 1.2") 2>&5
   ac_status=$?
   $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
   test $ac_status = 0; }; then
-  pkg_cv_CAIRO_LIBS=`$PKG_CONFIG --libs "cairo" 2>/dev/null`
+  pkg_cv_CAIRO_LIBS=`$PKG_CONFIG --libs "cairo >= 1.2" 2>/dev/null`
 else
   pkg_failed=yes
 fi
@@ -40148,9 +40173,9 @@ else
         _pkg_short_errors_supported=no
 fi
         if test $_pkg_short_errors_supported = yes; then
-	        CAIRO_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "cairo"`
+	        CAIRO_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "cairo >= 1.2"`
         else
-	        CAIRO_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "cairo"`
+	        CAIRO_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "cairo >= 1.2"`
         fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$CAIRO_PKG_ERRORS" >&5
@@ -40167,28 +40192,8 @@ else
 	CAIRO_LIBS=$pkg_cv_CAIRO_LIBS
         { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
-	wx_has_cairo=1
-fi
-    if test "$wx_has_cairo" = 1; then
-                                save_LIBS="$LIBS"
-        LIBS="$LIBS $CAIRO_LIBS"
-        for ac_func in cairo_push_group
-do :
-  ac_fn_c_check_func "$LINENO" "cairo_push_group" "ac_cv_func_cairo_push_group"
-if test "x$ac_cv_func_cairo_push_group" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_CAIRO_PUSH_GROUP 1
-_ACEOF
 
-fi
-done
-
-        LIBS="$save_LIBS"
-        if test "$ac_cv_func_cairo_push_group" = "no"; then
-            wx_has_cairo=0
-            { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: Cairo library is too old and misses cairo_push_group()" >&5
-$as_echo "$as_me: WARNING: Cairo library is too old and misses cairo_push_group()" >&2;}
-        else
+            wx_has_cairo=1
             $as_echo "#define wxUSE_CAIRO 1" >>confdefs.h
 
 
@@ -40196,8 +40201,8 @@ $as_echo "$as_me: WARNING: Cairo library is too old and misses cairo_push_group(
                 CXXFLAGS="$CXXFLAGS $CAIRO_CFLAGS"
                 GUI_TK_LIBRARY="$GUI_TK_LIBRARY $CAIRO_LIBS"
             fi
-        fi
-    fi
+
+fi
 fi
 
 if test "$wxUSE_GRAPHICS_CONTEXT" = "yes"; then

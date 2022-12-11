@@ -18,7 +18,7 @@
 #cmakedefine wxINSTALL_PREFIX "@wxINSTALL_PREFIX@"
 
 /* Define if ssize_t type is available.  */
-#cmakedefine HAVE_SSIZE_T
+#cmakedefine HAVE_SSIZE_T 1
 
 /* Define if you have the ANSI C header files.  */
 #cmakedefine STDC_HEADERS 1
@@ -174,7 +174,6 @@
 #cmakedefine01 wxUSE_STD_CONTAINERS
 
 #cmakedefine01 wxUSE_STD_IOSTREAM
-
 #define wxUSE_STD_STRING_CONV_IN_WXSTRING wxUSE_STL
 
 

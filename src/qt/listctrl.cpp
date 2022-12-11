@@ -1031,6 +1031,15 @@ void wxQtListTreeWidget::itemActivated(const QModelIndex &index)
     EmitListEvent(wxEVT_LIST_ITEM_ACTIVATED, index);
 }
 
+// Specialization: to safely remove and delete the model associated with QTreeView
+template<>
+void wxQtEventSignalHandler< QTreeView, wxListCtrl >::HandleDestroyedSignal()
+{
+    // This handler is emitted immediately before the QTreeView obj is destroyed
+    // at which point the parent object (wxListCtrl) pointer is guaranteed to still
+    // be valid for the model to be safely removed.
+    this->setModel(nullptr);
+}
 
 wxListCtrl::wxListCtrl()
 {
@@ -1088,7 +1097,6 @@ void wxListCtrl::Init()
 
 wxListCtrl::~wxListCtrl()
 {
-    m_qtTreeWidget->setModel(nullptr);
     m_model->deleteLater();
 }
 
@@ -1614,6 +1622,12 @@ void wxListCtrl::ClearAll()
 wxTextCtrl* wxListCtrl::EditLabel(long item,
                                   wxClassInfo* WXUNUSED(textControlClass))
 {
+    // Calling this function for control without wxLC_EDIT_LABELS flag set
+    // is not portable. i.e. on wxMSW this function cannot edit labels if
+    // the flag is not already set on the control.
+    wxASSERT_MSG( HasFlag(wxLC_EDIT_LABELS),
+                 "should only be called if wxLC_EDIT_LABELS flag is set");
+
     // Open the editor first so that it's available when handling events as per
     // wx standard.
     const QModelIndex index = m_model->index(item, 0);
