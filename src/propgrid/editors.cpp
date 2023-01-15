@@ -118,11 +118,6 @@
 
 wxIMPLEMENT_ABSTRACT_CLASS(wxPGEditor, wxObject);
 
-
-wxPGEditor::~wxPGEditor()
-{
-}
-
 wxString wxPGEditor::GetName() const
 {
     return GetClassInfo()->GetClassName();
@@ -176,17 +171,13 @@ void wxPGEditor::SetControlAppearance( wxPropertyGrid* pg,
                                        bool unspecified ) const
 {
     // Get old editor appearance
-    wxTextCtrl* tc = nullptr;
+    wxTextCtrl* tc = wxDynamicCast(ctrl, wxTextCtrl);
     wxComboCtrl* cb = nullptr;
-    if ( wxDynamicCast(ctrl, wxTextCtrl) )
+    if ( !tc )
     {
-        tc = (wxTextCtrl*) ctrl;
-    }
-    else
-    {
-        if ( wxDynamicCast(ctrl, wxComboCtrl) )
+        cb = wxDynamicCast(ctrl, wxComboCtrl);
+        if ( cb )
         {
-            cb = (wxComboCtrl*) ctrl;
             tc = cb->GetTextCtrl();
         }
     }
@@ -725,8 +716,7 @@ void wxPropertyGrid::OnComboItemPaint( const wxPGComboBox* pCb,
         comValIndex = item - choiceCount;
         if ( !p->IsValueUnspecified() || !(flags & wxODCB_PAINTING_CONTROL) )
         {
-            const wxPGCommonValue* cv = GetCommonValue(comValIndex);
-            text = cv->GetLabel();
+            text = GetCommonValueLabel(comValIndex);
         }
     }
     else
@@ -1491,8 +1481,7 @@ public:
         wxControl::SetBackgroundStyle( wxBG_STYLE_PAINT );
     }
 
-    virtual ~wxSimpleCheckBox();
-
+    virtual ~wxSimpleCheckBox() = default;
 
     void SetBoxHeight(int height)
     {
@@ -1540,10 +1529,6 @@ wxBEGIN_EVENT_TABLE(wxSimpleCheckBox, wxControl)
     EVT_SIZE(wxSimpleCheckBox::OnResize)
     EVT_COMMAND(wxID_ANY, wxEVT_CB_LEFT_CLICK_ACTIVATE, wxSimpleCheckBox::OnLeftClickActivate)
 wxEND_EVENT_TABLE()
-
-wxSimpleCheckBox::~wxSimpleCheckBox()
-{
-}
 
 void wxSimpleCheckBox::OnPaint( wxPaintEvent& WXUNUSED(event) )
 {
@@ -1983,7 +1968,7 @@ wxWindow* wxPropertyGrid::GenerateEditorButton( const wxPoint& pos, const wxSize
     wxPGProperty* selected = GetSelection();
     wxASSERT(selected);
 
-    const wxString label = wxString::FromUTF8("\xe2\x80\xa6"); // "Horizontal ellipsis" character
+    const wxString label(L"\u2026"); // "Horizontal ellipsis" character
 
     int dim = sz.y + 2*wxPG_BUTTON_BORDER_WIDTH;
 
@@ -2037,7 +2022,7 @@ wxWindow* wxPropertyGrid::GenerateEditorTextCtrlAndButton( const wxPoint& pos,
     if ( !property->IsValueUnspecified() )
         text = property->GetValueAsString(property->HasFlag(wxPG_PROP_READONLY)?0:wxPG_EDITABLE_VALUE);
 
-    return GenerateEditorTextCtrl(pos,sz,text,but,property->GetMaxLength());
+    return GenerateEditorTextCtrl(pos, sz, text, but, 0, property->GetMaxLength());
 }
 
 // -----------------------------------------------------------------------
@@ -2088,12 +2073,8 @@ wxTextCtrl* wxPropertyGrid::GetEditorTextCtrl() const
 
 wxPGEditor* wxPropertyGridInterface::GetEditorByName( const wxString& editorName )
 {
-    wxPGHashMapS2P::const_iterator it;
-
-    it = wxPGGlobalVars->m_mapEditorClasses.find(editorName);
-    if ( it == wxPGGlobalVars->m_mapEditorClasses.end() )
-        return nullptr;
-    return (wxPGEditor*) it->second;
+    auto it = wxPGGlobalVars->m_mapEditorClasses.find(editorName);
+    return it == wxPGGlobalVars->m_mapEditorClasses.end() ? nullptr : it->second;
 }
 
 // -----------------------------------------------------------------------

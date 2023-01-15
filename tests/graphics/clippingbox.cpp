@@ -1817,6 +1817,37 @@ static void TwoDevRegionsNonOverlappingNegDim(wxDC& dc, const wxBitmap& bmp, boo
                  0, 0, 0, 0);
 }
 
+static void DcAttributes(wxDC& dc)
+{
+    // Check if wxDC atrributes left unchanged
+    wxFont font = dc.GetFont().Bold().Smaller();
+    wxPen pen(*wxYELLOW, 2);
+    wxBrush brush = *wxBLUE_BRUSH;
+
+    wxDCFontChanger fontChanger(dc, font);
+    wxDCPenChanger penChanger(dc, pen);
+    wxDCBrushChanger brushChanger(dc, brush);
+    wxCoord chWidth = dc.GetCharWidth();
+    wxCoord chHeight = dc.GetCharHeight();
+    wxFontMetrics fm = dc.GetFontMetrics();
+
+    dc.SetClippingRegion(10, 20, 30, 40);
+    dc.DestroyClippingRegion();
+
+    CHECK(dc.GetFont() == font);
+    CHECK(dc.GetPen() == pen);
+    CHECK(dc.GetBrush() == brush);
+    CHECK(dc.GetCharWidth() == chWidth);
+    CHECK(dc.GetCharHeight() == chHeight);
+    wxFontMetrics fm2 = dc.GetFontMetrics();
+    CHECK(fm2.ascent == fm.ascent);
+    CHECK(fm2.averageWidth == fm.averageWidth);
+    CHECK(fm2.descent == fm.descent);
+    CHECK(fm2.externalLeading == fm.externalLeading);
+    CHECK(fm2.height == fm.height);
+    CHECK(fm2.internalLeading == fm.internalLeading);
+}
+
 // Tests specific to wxGCDC
 #if wxUSE_GRAPHICS_CONTEXT
 static void InitialStateWithRotatedGCForDC(wxGCDC& dc, const wxBitmap& bmp, const wxPoint& parentDcOrigin)
@@ -2198,6 +2229,11 @@ TEST_CASE("ClippingBoxTestCase::wxDC", "[clip][dc]")
     {
         TwoDevRegionsNonOverlappingNegDim(dc, bmp, true);
     }
+
+    SECTION("DCAttributes")
+    {
+        DcAttributes(dc);
+    }
 }
 
 #if wxUSE_GRAPHICS_CONTEXT
@@ -2535,6 +2571,11 @@ TEST_CASE("ClippingBoxTestCase::wxGCDC", "[clip][dc][gcdc]")
     SECTION("TwoDevRegionsNonOverlappingNegDim Transform Matrix")
     {
         TwoDevRegionsNonOverlappingNegDim(dc, bmp, true);
+    }
+
+    SECTION("DCAttributes")
+    {
+        DcAttributes(dc);
     }
 
     SECTION("InitialStateWithRotatedGCForDC")
@@ -2882,6 +2923,11 @@ TEST_CASE("ClippingBoxTestCase::wxGCDC(GDI+)", "[clip][dc][gcdc][gdiplus]")
         TwoDevRegionsNonOverlappingNegDim(dc, bmp, true);
     }
 
+    SECTION("DCAttributes")
+    {
+        DcAttributes(dc);
+    }
+
     SECTION("InitialStateWithRotatedGCForDC")
     {
         InitialStateWithRotatedGCForDC(dc, bmp, dcOrigin);
@@ -3224,6 +3270,11 @@ TEST_CASE("ClippingBoxTestCase::wxGCDC(Direct2D)", "[clip][dc][gcdc][direct2d]")
     SECTION("TwoDevRegionsNonOverlappingNegDim Transform Matrix")
     {
         TwoDevRegionsNonOverlappingNegDim(dc, bmp, true);
+    }
+
+    SECTION("DCAttributes")
+    {
+        DcAttributes(dc);
     }
 
     SECTION("InitialStateWithRotatedGCForDC")
@@ -3575,6 +3626,11 @@ TEST_CASE("ClippingBoxTestCase::wxGCDC(Cairo)", "[clip][dc][gcdc][cairo]")
         TwoDevRegionsNonOverlappingNegDim(dc, bmp, true);
     }
 
+    SECTION("DCAttributes")
+    {
+        DcAttributes(dc);
+    }
+
     SECTION("InitialStateWithRotatedGCForDC")
     {
         InitialStateWithRotatedGCForDC(dc, bmp, dcOrigin);
@@ -3901,10 +3957,15 @@ TEST_CASE("ClippingBoxTestCase::wxSVGFileDC", "[clip][dc][svgdc]")
     {
         TwoDevRegionsNonOverlappingNegDim(dc, bmp, true);
     }
+
+    SECTION("DCAttributes")
+    {
+        DcAttributes(dc);
+    }
 }
 #endif // wxUSE_SVG
 
-TEST_CASE("ClippingBoxTestCase::wxClientDC", "[clip][dc][clientdc]")
+TEST_CASE("ClippingBoxTestCase::wxPaintDC", "[clip][dc][paintdc]")
 {
     wxBitmap bmp; // We need wxNullBitmap because we can't check the output
     // Ensure window is shown and large enough for testing
@@ -3914,335 +3975,359 @@ TEST_CASE("ClippingBoxTestCase::wxClientDC", "[clip][dc][clientdc]")
     winSize.x = wxMax(winSize.x, s_dcSize.x + 50);
     winSize.y = wxMax(winSize.y, s_dcSize.y + 50);
     wxTheApp->GetTopWindow()->SetSize(winSize);
-#if defined(__WXGTK__) && !defined(__WXGTK3__)
-    // Under wxGTK2 we need to have two children (at least) because if there
-    // is exactly one child its size is set to fill the whole parent frame
-    // and the window cannot be resized - see wxTopLevelWindowBase::Layout().
+#if defined(__WXGTK__)
+    // Under wxGTK we need to have two children (at least) because if there
+    // is one child its paint area is set to fill the whole parent frame.
     wxScopedPtr<wxWindow> w0(new wxWindow(wxTheApp->GetTopWindow(), wxID_ANY));
-#endif // wxGTK 2
+#endif // wxGTK
     wxScopedPtr<wxWindow> win(new wxWindow(wxTheApp->GetTopWindow(), wxID_ANY, wxPoint(0, 0)));
     win->SetClientSize(s_dcSize);
 
     // Wait for the first paint event to be sure
     // that window really has its final size.
-    WaitForPaint waitForPaint(win.get());
-    win->Show();
-    waitForPaint.YieldUntilPainted();
-
-    wxClientDC dc(win.get());
-    REQUIRE(dc.GetSize() == s_dcSize);
-    dc.SetBackground(wxBrush(s_bgColour, wxBRUSHSTYLE_SOLID));
-    dc.Clear();
-
-    SECTION("InitialState")
+    wxWindow* testWin = win.get();
     {
-        InitialState(dc, bmp, wxPoint());
+        WaitForPaint waitForPaint(testWin);
+        testWin->Show();
+        waitForPaint.YieldUntilPainted();
     }
 
-    SECTION("InitialStateWithTransformedDC 1")
+    bool paintExecuted = false;
+    testWin->Bind(wxEVT_PAINT, [=, &paintExecuted](wxPaintEvent&)
     {
-        InitialStateWithTransformedDC(dc, bmp, false, false, wxPoint());
+        wxPaintDC dc(testWin);
+        REQUIRE(dc.GetSize() == s_dcSize);
+        dc.SetBackground(wxBrush(s_bgColour, wxBRUSHSTYLE_SOLID));
+        dc.Clear();
+
+        SECTION("InitialState")
+        {
+            InitialState(dc, bmp, wxPoint());
+        }
+
+        SECTION("InitialStateWithTransformedDC 1")
+        {
+            InitialStateWithTransformedDC(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("InitialStateWithTransformedDC 2")
+        {
+            InitialStateWithTransformedDC(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("InitialStateWithTransformedDC Transform Matrix")
+        {
+            InitialStateWithTransformedDC(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("InitialStateWithRotatedDC")
+        {
+            InitialStateWithRotatedDC(dc, bmp, wxPoint());
+        }
+
+        SECTION("SameRegionRepeatRotatedDC")
+        {
+            SameRegionRepeatRotatedDC(dc, wxPoint());
+        }
+
+        SECTION("OneRegion")
+        {
+            OneRegion(dc, bmp, wxPoint());
+        }
+
+        SECTION("OneLargeRegion")
+        {
+            OneLargeRegion(dc, bmp, wxPoint());
+        }
+
+        SECTION("OneOuterRegion")
+        {
+            OneOuterRegion(dc, bmp);
+        }
+
+        SECTION("OneRegionNegDim")
+        {
+            OneRegionNegDim(dc, bmp, wxPoint());
+        }
+
+        SECTION("OneRegionAndReset")
+        {
+            OneRegionAndReset(dc, bmp, wxPoint());
+        }
+
+        SECTION("OneRegionAndEmpty")
+        {
+            OneRegionAndEmpty(dc, bmp);
+        }
+
+        SECTION("OneRegionOverTransformedDC 1")
+        {
+            OneRegionOverTransformedDC(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneRegionOverTransformedDC 2")
+        {
+            OneRegionOverTransformedDC(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneRegionOverTransformedDC Transform Matrix")
+        {
+            OneRegionOverTransformedDC(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("OneRegionOverRotatedDC")
+        {
+            OneRegionOverRotatedDC(dc);
+        }
+
+        SECTION("OneRegionAndDCTransformation 1")
+        {
+            OneRegionAndDCTransformation(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneRegionAndDCTransformation 2")
+        {
+            OneRegionAndDCTransformation(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneRegionAndDCTransformation Transform Matrix")
+        {
+            OneRegionAndDCTransformation(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("OneRegionRTL")
+        {
+            OneRegionRTL(dc, bmp);
+        }
+
+        SECTION("TwoRegionsOverlapping")
+        {
+            TwoRegionsOverlapping(dc, bmp, wxPoint());
+        }
+
+        SECTION("TwoRegionsOverlappingNegDim")
+        {
+            TwoRegionsOverlappingNegDim(dc, bmp, wxPoint());
+        }
+
+        SECTION("TwoRegionsNonOverlapping")
+        {
+            TwoRegionsNonOverlapping(dc, bmp);
+        }
+
+        SECTION("TwoRegionsNonOverlappingNegDim")
+        {
+            TwoRegionsNonOverlappingNegDim(dc, bmp);
+        }
+
+        SECTION("OneDevRegion 1")
+        {
+            OneDevRegion(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneDevRegion 2")
+        {
+            OneDevRegion(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneDevRegion Transform Matrix")
+        {
+            OneDevRegion(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("OneDevRegionRTL")
+        {
+            OneDevRegionRTL(dc, bmp, false);
+        }
+
+        SECTION("OneDevRegionRTL TransformMatrix")
+        {
+            OneDevRegionRTL(dc, bmp, true);
+        }
+
+        SECTION("OneLargeDevRegion 1")
+        {
+            OneLargeDevRegion(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneLargeDevRegion 2")
+        {
+            OneLargeDevRegion(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneLargeDevRegion Transform Matrix")
+        {
+            OneLargeDevRegion(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("OneOuterDevRegion")
+        {
+            OneOuterDevRegion(dc, bmp, false);
+        }
+
+        SECTION("OneOuterDevRegion Transform Matrix")
+        {
+            OneOuterDevRegion(dc, bmp, true);
+        }
+
+        SECTION("OneDevRegionNegDim 1")
+        {
+            OneDevRegionNegDim(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionNegDim 2")
+        {
+            OneDevRegionNegDim(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionNegDim Transform Matrix")
+        {
+            OneDevRegionNegDim(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("OneDevRegionNonRect 1")
+        {
+            OneDevRegionNonRect(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionNonRect 2")
+        {
+            OneDevRegionNonRect(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionNonRect Transform Matrix")
+        {
+            OneDevRegionNonRect(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("OneDevRegionAndReset 1")
+        {
+            OneDevRegionAndReset(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionAndReset 2")
+        {
+            OneDevRegionAndReset(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionAndReset Transform Matrix")
+        {
+            OneDevRegionAndReset(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("OneDevRegionAndEmpty")
+        {
+            OneDevRegionAndEmpty(dc, bmp, false);
+        }
+
+        SECTION("OneDevRegionAndEmpty Transform Matrix")
+        {
+            OneDevRegionAndEmpty(dc, bmp, true);
+        }
+
+        SECTION("OneDevRegionOverTransformedDC 1")
+        {
+            OneDevRegionOverTransformedDC(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionOverTransformedDC 2")
+        {
+            OneDevRegionOverTransformedDC(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionOverTransformedDC Transform Matrix")
+        {
+            OneDevRegionOverTransformedDC(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("OneDevRegionOverRotatedDC")
+        {
+            OneDevRegionOverRotatedDC(dc);
+        }
+
+        SECTION("OneDevRegionAndDCTransformation 1")
+        {
+            OneDevRegionAndDCTransformation(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionAndDCTransformation 2")
+        {
+            OneDevRegionAndDCTransformation(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("OneDevRegionAndDCTransformation Transform Matrix")
+        {
+            OneDevRegionAndDCTransformation(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("TwoDevRegionsOverlapping 1")
+        {
+            TwoDevRegionsOverlapping(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("TwoDevRegionsOverlapping 2")
+        {
+            TwoDevRegionsOverlapping(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("TwoDevRegionsOverlapping Transform Matrix")
+        {
+            TwoDevRegionsOverlapping(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("TwoDevRegionsOverlappingNegDim 1")
+        {
+            TwoDevRegionsOverlappingNegDim(dc, bmp, false, false, wxPoint());
+        }
+
+        SECTION("TwoDevRegionsOverlappingNegDim 2")
+        {
+            TwoDevRegionsOverlappingNegDim(dc, bmp, true, false, wxPoint());
+        }
+
+        SECTION("TwoDevRegionsOverlappingNegDim Transform Matrix")
+        {
+            TwoDevRegionsOverlappingNegDim(dc, bmp, true, true, wxPoint());
+        }
+
+        SECTION("TwoDevRegionsNonOverlapping")
+        {
+            TwoDevRegionsNonOverlapping(dc, bmp, false);
+        }
+
+        SECTION("TwoDevRegionsNonOverlapping Transform Matrix")
+        {
+            TwoDevRegionsNonOverlapping(dc, bmp, true);
+        }
+
+        SECTION("TwoDevRegionsNonOverlappingNegDim")
+        {
+            TwoDevRegionsNonOverlappingNegDim(dc, bmp, false);
+        }
+
+        SECTION("TwoDevRegionsNonOverlappingNegDim Transform Matrix")
+        {
+            TwoDevRegionsNonOverlappingNegDim(dc, bmp, true);
+        }
+
+        SECTION("DCAttributes")
+        {
+            DcAttributes(dc);
+        }
+
+        paintExecuted = true;
+    });
+
+    testWin->Refresh();
+    testWin->Update();
+    // Wait for update to be done
+    wxStopWatch sw;
+    while( sw.Time() < 50 )
+    {
+         wxYield();
     }
 
-    SECTION("InitialStateWithTransformedDC 2")
-    {
-        InitialStateWithTransformedDC(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("InitialStateWithTransformedDC Transform Matrix")
-    {
-        InitialStateWithTransformedDC(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("InitialStateWithRotatedDC")
-    {
-        InitialStateWithRotatedDC(dc, bmp, wxPoint());
-    }
-
-    SECTION("SameRegionRepeatRotatedDC")
-    {
-        SameRegionRepeatRotatedDC(dc, wxPoint());
-    }
-
-    SECTION("OneRegion")
-    {
-        OneRegion(dc, bmp, wxPoint());
-    }
-
-    SECTION("OneLargeRegion")
-    {
-        OneLargeRegion(dc, bmp, wxPoint());
-    }
-
-    SECTION("OneOuterRegion")
-    {
-        OneOuterRegion(dc, bmp);
-    }
-
-    SECTION("OneRegionNegDim")
-    {
-        OneRegionNegDim(dc, bmp, wxPoint());
-    }
-
-    SECTION("OneRegionAndReset")
-    {
-        OneRegionAndReset(dc, bmp, wxPoint());
-    }
-
-    SECTION("OneRegionAndEmpty")
-    {
-        OneRegionAndEmpty(dc, bmp);
-    }
-
-    SECTION("OneRegionOverTransformedDC 1")
-    {
-        OneRegionOverTransformedDC(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneRegionOverTransformedDC 2")
-    {
-        OneRegionOverTransformedDC(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneRegionOverTransformedDC Transform Matrix")
-    {
-        OneRegionOverTransformedDC(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("OneRegionOverRotatedDC")
-    {
-        OneRegionOverRotatedDC(dc);
-    }
-
-    SECTION("OneRegionAndDCTransformation 1")
-    {
-        OneRegionAndDCTransformation(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneRegionAndDCTransformation 2")
-    {
-        OneRegionAndDCTransformation(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneRegionAndDCTransformation Transform Matrix")
-    {
-        OneRegionAndDCTransformation(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("OneRegionRTL")
-    {
-        OneRegionRTL(dc, bmp);
-    }
-
-    SECTION("TwoRegionsOverlapping")
-    {
-        TwoRegionsOverlapping(dc, bmp, wxPoint());
-    }
-
-    SECTION("TwoRegionsOverlappingNegDim")
-    {
-        TwoRegionsOverlappingNegDim(dc, bmp, wxPoint());
-    }
-
-    SECTION("TwoRegionsNonOverlapping")
-    {
-        TwoRegionsNonOverlapping(dc, bmp);
-    }
-
-    SECTION("TwoRegionsNonOverlappingNegDim")
-    {
-        TwoRegionsNonOverlappingNegDim(dc, bmp);
-    }
-
-    SECTION("OneDevRegion 1")
-    {
-        OneDevRegion(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneDevRegion 2")
-    {
-        OneDevRegion(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneDevRegion Transform Matrix")
-    {
-        OneDevRegion(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("OneDevRegionRTL")
-    {
-        OneDevRegionRTL(dc, bmp, false);
-    }
-
-    SECTION("OneDevRegionRTL TransformMatrix")
-    {
-        OneDevRegionRTL(dc, bmp, true);
-    }
-
-    SECTION("OneLargeDevRegion 1")
-    {
-        OneLargeDevRegion(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneLargeDevRegion 2")
-    {
-        OneLargeDevRegion(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneLargeDevRegion Transform Matrix")
-    {
-        OneLargeDevRegion(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("OneOuterDevRegion")
-    {
-        OneOuterDevRegion(dc, bmp, false);
-    }
-
-    SECTION("OneOuterDevRegion Transform Matrix")
-    {
-        OneOuterDevRegion(dc, bmp, true);
-    }
-
-    SECTION("OneDevRegionNegDim 1")
-    {
-        OneDevRegionNegDim(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionNegDim 2")
-    {
-        OneDevRegionNegDim(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionNegDim Transform Matrix")
-    {
-        OneDevRegionNegDim(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("OneDevRegionNonRect 1")
-    {
-        OneDevRegionNonRect(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionNonRect 2")
-    {
-        OneDevRegionNonRect(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionNonRect Transform Matrix")
-    {
-        OneDevRegionNonRect(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("OneDevRegionAndReset 1")
-    {
-        OneDevRegionAndReset(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionAndReset 2")
-    {
-        OneDevRegionAndReset(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionAndReset Transform Matrix")
-    {
-        OneDevRegionAndReset(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("OneDevRegionAndEmpty")
-    {
-        OneDevRegionAndEmpty(dc, bmp, false);
-    }
-
-    SECTION("OneDevRegionAndEmpty Transform Matrix")
-    {
-        OneDevRegionAndEmpty(dc, bmp, true);
-    }
-
-    SECTION("OneDevRegionOverTransformedDC 1")
-    {
-        OneDevRegionOverTransformedDC(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionOverTransformedDC 2")
-    {
-        OneDevRegionOverTransformedDC(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionOverTransformedDC Transform Matrix")
-    {
-        OneDevRegionOverTransformedDC(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("OneDevRegionOverRotatedDC")
-    {
-        OneDevRegionOverRotatedDC(dc);
-    }
-
-    SECTION("OneDevRegionAndDCTransformation 1")
-    {
-        OneDevRegionAndDCTransformation(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionAndDCTransformation 2")
-    {
-        OneDevRegionAndDCTransformation(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("OneDevRegionAndDCTransformation Transform Matrix")
-    {
-        OneDevRegionAndDCTransformation(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("TwoDevRegionsOverlapping 1")
-    {
-        TwoDevRegionsOverlapping(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("TwoDevRegionsOverlapping 2")
-    {
-        TwoDevRegionsOverlapping(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("TwoDevRegionsOverlapping Transform Matrix")
-    {
-        TwoDevRegionsOverlapping(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("TwoDevRegionsOverlappingNegDim 1")
-    {
-        TwoDevRegionsOverlappingNegDim(dc, bmp, false, false, wxPoint());
-    }
-
-    SECTION("TwoDevRegionsOverlappingNegDim 2")
-    {
-        TwoDevRegionsOverlappingNegDim(dc, bmp, true, false, wxPoint());
-    }
-
-    SECTION("TwoDevRegionsOverlappingNegDim Transform Matrix")
-    {
-        TwoDevRegionsOverlappingNegDim(dc, bmp, true, true, wxPoint());
-    }
-
-    SECTION("TwoDevRegionsNonOverlapping")
-    {
-        TwoDevRegionsNonOverlapping(dc, bmp, false);
-    }
-
-    SECTION("TwoDevRegionsNonOverlapping Transform Matrix")
-    {
-        TwoDevRegionsNonOverlapping(dc, bmp, true);
-    }
-
-    SECTION("TwoDevRegionsNonOverlappingNegDim")
-    {
-        TwoDevRegionsNonOverlappingNegDim(dc, bmp, false);
-    }
-
-    SECTION("TwoDevRegionsNonOverlappingNegDim Transform Matrix")
-    {
-        TwoDevRegionsNonOverlappingNegDim(dc, bmp, true);
-    }
+    CHECK(paintExecuted == true);
 }
 
 #if wxUSE_GRAPHICS_CONTEXT

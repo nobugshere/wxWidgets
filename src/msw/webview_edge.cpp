@@ -161,8 +161,8 @@ class wxWebViewEdgeHandlerResponseStream : public wxCOMInputStreamAdapter
 {
 public:
     wxWebViewEdgeHandlerResponseStream(wxSharedPtr<wxWebViewHandlerResponseData> data):
-        m_data(data),
-        wxCOMInputStreamAdapter(data->GetStream())
+        wxCOMInputStreamAdapter(data->GetStream()),
+        m_data(data)
     { }
 
     wxSharedPtr<wxWebViewHandlerResponseData> m_data;
@@ -171,23 +171,28 @@ public:
 class wxWebViewEdgeHandlerResponse : public wxWebViewHandlerResponse
 {
 public:
-    wxWebViewEdgeHandlerResponse(ICoreWebView2WebResourceRequestedEventArgs* args, ICoreWebView2Environment* env):
-        m_args(args),
-        m_env(env)
+    wxWebViewEdgeHandlerResponse(ICoreWebView2WebResourceRequestedEventArgs* args, ICoreWebView2WebResourceResponse* response):
+        m_response(response),
+        m_args(args)
     {
-        m_args->GetDeferral(&m_deferral);
-
-        // Create response
-        HRESULT hr = m_env->CreateWebResourceResponse(nullptr, 200, nullptr, nullptr, &m_response);
+        HRESULT hr = m_args->GetDeferral(&m_deferral);
         if (FAILED(hr))
-            wxLogApiError("CreateWebResourceResponse", hr);
+            wxLogApiError("GetDeferral", hr);
     }
 
     void SetReason(const wxString& reason)
-    { m_response->put_ReasonPhrase(reason.wc_str()); }
+    {
+        HRESULT hr = m_response->put_ReasonPhrase(reason.wc_str());
+        if (FAILED(hr))
+            wxLogApiError("put_ReasonPhrase", hr);
+    }
 
     virtual void SetStatus(int status) override
-    { m_response->put_StatusCode(status); }
+    {
+        HRESULT hr = m_response->put_StatusCode(status);
+        if (FAILED(hr))
+            wxLogApiError("put_StatusCode", hr);
+    }
 
     virtual void SetContentType(const wxString& contentType) override
     { SetHeader("Content-Type", contentType); }
@@ -219,6 +224,8 @@ public:
         return true;
     }
 
+    using wxWebViewHandlerResponse::Finish;
+
     virtual void Finish(wxSharedPtr<wxWebViewHandlerResponseData> data) override
     {
         SetReason("OK");
@@ -240,10 +247,8 @@ public:
         SendResponse();
     }
 
-    int m_status;
     wxCOMPtr<ICoreWebView2WebResourceResponse> m_response;
     wxCOMPtr<ICoreWebView2Deferral> m_deferral;
-    wxCOMPtr<ICoreWebView2Environment> m_env;
     wxCOMPtr<ICoreWebView2WebResourceRequestedEventArgs> m_args;
 };
 
@@ -284,6 +289,7 @@ bool wxWebViewEdgeImpl::Create()
     m_inEventCallback = false;
     m_pendingContextMenuEnabled = -1;
     m_pendingAccessToDevToolsEnabled = 0;
+    m_pendingEnableBrowserAcceleratorKeys = -1;
 
     m_historyLoadingFromList = false;
     m_historyEnabled = true;
@@ -577,7 +583,16 @@ HRESULT wxWebViewEdgeImpl::OnWebResourceRequested(ICoreWebView2* WXUNUSED(sender
         return E_INVALIDARG;
     request.SetHandler(handler.get());
 
-    wxSharedPtr<wxWebViewHandlerResponse> resp(new wxWebViewEdgeHandlerResponse(args, m_webViewEnvironment));
+    // Create response
+    wxCOMPtr<ICoreWebView2WebResourceResponse> runtimeResponse;
+    hr = m_webViewEnvironment->CreateWebResourceResponse(nullptr, 200, L"OK", nullptr, &runtimeResponse);
+    if (FAILED(hr))
+    {
+        wxLogApiError("CreateWebResourceResponse", hr);
+        return hr;
+    }
+
+    wxSharedPtr<wxWebViewHandlerResponse> resp(new wxWebViewEdgeHandlerResponse(args, runtimeResponse));
     handler->StartRequest(request, resp);
     return S_OK;
 }
@@ -665,6 +680,12 @@ HRESULT wxWebViewEdgeImpl::OnWebViewCreated(HRESULT result, ICoreWebView2Control
     {
         m_ctrl->EnableAccessToDevTools(m_pendingAccessToDevToolsEnabled == 1);
         m_pendingContextMenuEnabled = -1;
+    }
+
+    if (m_pendingEnableBrowserAcceleratorKeys != -1)
+    {
+        m_ctrl->EnableBrowserAcceleratorKeys(m_pendingEnableBrowserAcceleratorKeys == 1);
+        m_pendingEnableBrowserAcceleratorKeys = -1;
     }
 
     wxCOMPtr<ICoreWebView2Settings> settings(GetSettings());
@@ -1057,6 +1078,37 @@ bool wxWebViewEdge::IsAccessToDevToolsEnabled() const
 
     return true;
 }
+
+void wxWebViewEdge::EnableBrowserAcceleratorKeys(bool enable)
+{
+    wxCOMPtr<ICoreWebView2Settings> settings(m_impl->GetSettings());
+    if (settings)
+    {
+        wxCOMPtr<ICoreWebView2Settings3> settings3;
+        if (SUCCEEDED(settings->QueryInterface(IID_PPV_ARGS(&settings3))))
+            settings3->put_AreBrowserAcceleratorKeysEnabled(enable);
+    }
+    else
+        m_impl->m_pendingEnableBrowserAcceleratorKeys = enable ? 1 : 0;
+}
+
+bool wxWebViewEdge::AreBrowserAcceleratorKeysEnabled() const
+{
+    wxCOMPtr<ICoreWebView2Settings> settings(m_impl->GetSettings());
+    if (settings)
+    {
+        BOOL browserAcceleratorKeysEnabled = TRUE;
+        wxCOMPtr<ICoreWebView2Settings3> settings3;
+        if (SUCCEEDED(settings->QueryInterface(IID_PPV_ARGS(&settings3))))
+            settings3->get_AreBrowserAcceleratorKeysEnabled(&browserAcceleratorKeysEnabled);
+
+        if (!browserAcceleratorKeysEnabled)
+            return false;
+    }
+
+    return true;
+}
+
 
 bool wxWebViewEdge::SetUserAgent(const wxString& userAgent)
 {

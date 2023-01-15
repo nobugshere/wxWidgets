@@ -872,7 +872,6 @@ ALL_BASE_SOURCES =  \
 	src/common/list.cpp \
 	src/common/log.cpp \
 	src/common/longlong.cpp \
-	src/common/memory.cpp \
 	src/common/mimecmn.cpp \
 	src/common/module.cpp \
 	src/common/mstream.cpp \
@@ -1064,7 +1063,6 @@ MONODLL_OBJECTS =  \
 	monodll_list.o \
 	monodll_log.o \
 	monodll_longlong.o \
-	monodll_memory.o \
 	monodll_mimecmn.o \
 	monodll_module.o \
 	monodll_mstream.o \
@@ -1210,7 +1208,6 @@ MONOLIB_OBJECTS =  \
 	monolib_list.o \
 	monolib_log.o \
 	monolib_longlong.o \
-	monolib_memory.o \
 	monolib_mimecmn.o \
 	monolib_module.o \
 	monolib_mstream.o \
@@ -1340,7 +1337,6 @@ BASEDLL_OBJECTS =  \
 	basedll_list.o \
 	basedll_log.o \
 	basedll_longlong.o \
-	basedll_memory.o \
 	basedll_mimecmn.o \
 	basedll_module.o \
 	basedll_mstream.o \
@@ -1452,7 +1448,6 @@ BASELIB_OBJECTS =  \
 	baselib_list.o \
 	baselib_log.o \
 	baselib_longlong.o \
-	baselib_memory.o \
 	baselib_mimecmn.o \
 	baselib_module.o \
 	baselib_mstream.o \
@@ -5291,6 +5286,7 @@ COND_TOOLKIT_MSW___GUI_SRC_OBJECTS =  \
 	monodll_timectrl.o \
 	monodll_datecontrols.o \
 	monodll_generic_activityindicator.o \
+	monodll_darkmode.o \
 	monodll_msw_checklst.o \
 	monodll_msw_fdrepdlg.o \
 	monodll_msw_fontdlg.o
@@ -7046,6 +7042,7 @@ COND_TOOLKIT_MSW___GUI_SRC_OBJECTS_1 =  \
 	monolib_timectrl.o \
 	monolib_datecontrols.o \
 	monolib_generic_activityindicator.o \
+	monolib_darkmode.o \
 	monolib_msw_checklst.o \
 	monolib_msw_fdrepdlg.o \
 	monolib_msw_fontdlg.o
@@ -8955,6 +8952,7 @@ COND_TOOLKIT_MSW___GUI_SRC_OBJECTS_2 =  \
 	coredll_timectrl.o \
 	coredll_datecontrols.o \
 	coredll_generic_activityindicator.o \
+	coredll_darkmode.o \
 	coredll_msw_checklst.o \
 	coredll_msw_fdrepdlg.o \
 	coredll_msw_fontdlg.o
@@ -10440,6 +10438,7 @@ COND_TOOLKIT_MSW___GUI_SRC_OBJECTS_3 =  \
 	corelib_timectrl.o \
 	corelib_datecontrols.o \
 	corelib_generic_activityindicator.o \
+	corelib_darkmode.o \
 	corelib_msw_checklst.o \
 	corelib_msw_fdrepdlg.o \
 	corelib_msw_fontdlg.o
@@ -14746,9 +14745,6 @@ monodll_log.o: $(srcdir)/src/common/log.cpp $(MONODLL_ODEP)
 monodll_longlong.o: $(srcdir)/src/common/longlong.cpp $(MONODLL_ODEP)
 	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/common/longlong.cpp
 
-monodll_memory.o: $(srcdir)/src/common/memory.cpp $(MONODLL_ODEP)
-	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/common/memory.cpp
-
 monodll_mimecmn.o: $(srcdir)/src/common/mimecmn.cpp $(MONODLL_ODEP)
 	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/common/mimecmn.cpp
 
@@ -15252,6 +15248,9 @@ monodll_timectrl.o: $(srcdir)/src/msw/timectrl.cpp $(MONODLL_ODEP)
 
 monodll_datecontrols.o: $(srcdir)/src/msw/datecontrols.cpp $(MONODLL_ODEP)
 	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/msw/datecontrols.cpp
+
+monodll_darkmode.o: $(srcdir)/src/msw/darkmode.cpp $(MONODLL_ODEP)
+	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/msw/darkmode.cpp
 
 monodll_msw_checklst.o: $(srcdir)/src/msw/checklst.cpp $(MONODLL_ODEP)
 	$(CXXC) -c -o $@ $(MONODLL_CXXFLAGS) $(srcdir)/src/msw/checklst.cpp
@@ -19510,9 +19509,6 @@ monolib_log.o: $(srcdir)/src/common/log.cpp $(MONOLIB_ODEP)
 monolib_longlong.o: $(srcdir)/src/common/longlong.cpp $(MONOLIB_ODEP)
 	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/common/longlong.cpp
 
-monolib_memory.o: $(srcdir)/src/common/memory.cpp $(MONOLIB_ODEP)
-	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/common/memory.cpp
-
 monolib_mimecmn.o: $(srcdir)/src/common/mimecmn.cpp $(MONOLIB_ODEP)
 	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/common/mimecmn.cpp
 
@@ -20016,6 +20012,9 @@ monolib_timectrl.o: $(srcdir)/src/msw/timectrl.cpp $(MONOLIB_ODEP)
 
 monolib_datecontrols.o: $(srcdir)/src/msw/datecontrols.cpp $(MONOLIB_ODEP)
 	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/msw/datecontrols.cpp
+
+monolib_darkmode.o: $(srcdir)/src/msw/darkmode.cpp $(MONOLIB_ODEP)
+	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/msw/darkmode.cpp
 
 monolib_msw_checklst.o: $(srcdir)/src/msw/checklst.cpp $(MONOLIB_ODEP)
 	$(CXXC) -c -o $@ $(MONOLIB_CXXFLAGS) $(srcdir)/src/msw/checklst.cpp
@@ -24274,9 +24273,6 @@ basedll_log.o: $(srcdir)/src/common/log.cpp $(BASEDLL_ODEP)
 basedll_longlong.o: $(srcdir)/src/common/longlong.cpp $(BASEDLL_ODEP)
 	$(CXXC) -c -o $@ $(BASEDLL_CXXFLAGS) $(srcdir)/src/common/longlong.cpp
 
-basedll_memory.o: $(srcdir)/src/common/memory.cpp $(BASEDLL_ODEP)
-	$(CXXC) -c -o $@ $(BASEDLL_CXXFLAGS) $(srcdir)/src/common/memory.cpp
-
 basedll_mimecmn.o: $(srcdir)/src/common/mimecmn.cpp $(BASEDLL_ODEP)
 	$(CXXC) -c -o $@ $(BASEDLL_CXXFLAGS) $(srcdir)/src/common/mimecmn.cpp
 
@@ -24759,9 +24755,6 @@ baselib_log.o: $(srcdir)/src/common/log.cpp $(BASELIB_ODEP)
 
 baselib_longlong.o: $(srcdir)/src/common/longlong.cpp $(BASELIB_ODEP)
 	$(CXXC) -c -o $@ $(BASELIB_CXXFLAGS) $(srcdir)/src/common/longlong.cpp
-
-baselib_memory.o: $(srcdir)/src/common/memory.cpp $(BASELIB_ODEP)
-	$(CXXC) -c -o $@ $(BASELIB_CXXFLAGS) $(srcdir)/src/common/memory.cpp
 
 baselib_mimecmn.o: $(srcdir)/src/common/mimecmn.cpp $(BASELIB_ODEP)
 	$(CXXC) -c -o $@ $(BASELIB_CXXFLAGS) $(srcdir)/src/common/mimecmn.cpp
@@ -25464,6 +25457,9 @@ coredll_timectrl.o: $(srcdir)/src/msw/timectrl.cpp $(COREDLL_ODEP)
 
 coredll_datecontrols.o: $(srcdir)/src/msw/datecontrols.cpp $(COREDLL_ODEP)
 	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/msw/datecontrols.cpp
+
+coredll_darkmode.o: $(srcdir)/src/msw/darkmode.cpp $(COREDLL_ODEP)
+	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/msw/darkmode.cpp
 
 coredll_msw_checklst.o: $(srcdir)/src/msw/checklst.cpp $(COREDLL_ODEP)
 	$(CXXC) -c -o $@ $(COREDLL_CXXFLAGS) $(srcdir)/src/msw/checklst.cpp
@@ -29196,6 +29192,9 @@ corelib_timectrl.o: $(srcdir)/src/msw/timectrl.cpp $(CORELIB_ODEP)
 
 corelib_datecontrols.o: $(srcdir)/src/msw/datecontrols.cpp $(CORELIB_ODEP)
 	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/msw/datecontrols.cpp
+
+corelib_darkmode.o: $(srcdir)/src/msw/darkmode.cpp $(CORELIB_ODEP)
+	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/msw/darkmode.cpp
 
 corelib_msw_checklst.o: $(srcdir)/src/msw/checklst.cpp $(CORELIB_ODEP)
 	$(CXXC) -c -o $@ $(CORELIB_CXXFLAGS) $(srcdir)/src/msw/checklst.cpp

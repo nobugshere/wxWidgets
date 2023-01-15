@@ -59,6 +59,10 @@ Changes in behaviour not resulting in compilation errors
 - Calling wxListCtrl::EditLabel() now asserts if the control doesn't have
   wxLC_EDIT_LABELS style: previously this silently didn't work in wxMSW.
 
+- wxSystemAppearance::IsDark() now returns whether this application uses dark
+  mode under MSW, use the new AreAppsDark() or IsSystemDark() to check if the
+  other applications or the system are using dark mode.
+
 
 Changes in behaviour which may result in build errors
 -----------------------------------------------------
@@ -77,6 +81,18 @@ Changes in behaviour which may result in build errors
 
 - wxOnAssert() overload taking wide character file name was removed. If you
   call it for any reason, please use one of the other overloads instead.
+
+- 64-bit DLLs now use "x64" suffix in their names for all builds, not just
+  the official ones and those using MSVS projects, but also when using
+  makefile.vc or CMake, for consistency.
+
+- Support for memory debugging that was previously disabled but could be
+  activated by using wxUSE_MEMORY_TRACING, wxUSE_GLOBAL_MEMORY_OPERATORS etc
+  options was completely removed. Please use address sanitizer or similar
+  tools that are incomparably more useful for this than that legacy code.
+
+- wxTEST_DIALOG() macro now must be followed by semicolon, whereas previously
+  it was only supposed to, but it wasn't mandatory to use one after it.
 
 
 3.3.0: (released 2022-??-??)

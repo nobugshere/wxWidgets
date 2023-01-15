@@ -56,6 +56,7 @@
 #include "wx/msw/private.h"
 #include "wx/msw/dc.h"
 #include "wx/msw/ole/oleutils.h"
+#include "wx/msw/private/darkmode.h"
 #include "wx/msw/private/timer.h"
 
 #if wxUSE_TOOLTIPS
@@ -633,6 +634,14 @@ bool wxApp::Initialize(int& argc_, wxChar **argv_)
 
     wxSetKeyboardHook(true);
 
+    // this is useful to allow users to enable dark mode for the applications
+    // not enabling it themselves by setting the corresponding environment
+    // variable
+    if ( const int darkMode = wxSystemOptions::GetOptionInt("msw.dark-mode") )
+    {
+        MSWEnableDarkMode(darkMode > 1 ? DarkMode_Always : DarkMode_Auto);
+    }
+
     callBaseCleanup.Dismiss();
 
     return true;
@@ -656,6 +665,15 @@ const wxChar *wxApp::GetRegisteredClassName(const wxChar *name,
             return gs_regClassesInfo[n].GetRequestedName(flags);
     }
 
+    // In dark mode, use the dark background brush instead of specified colour
+    // which would result in light background.
+    HBRUSH hbrBackground;
+    if ( wxMSWDarkMode::IsActive() )
+        hbrBackground = wxMSWDarkMode::GetBackgroundBrush();
+    else
+        hbrBackground = (HBRUSH)wxUIntToPtr(bgBrushCol + 1);
+
+
     // we need to register this class
     WNDCLASS wndclass;
     wxZeroMemory(wndclass);
@@ -663,7 +681,7 @@ const wxChar *wxApp::GetRegisteredClassName(const wxChar *name,
     wndclass.lpfnWndProc   = (WNDPROC)wxWndProc;
     wndclass.hInstance     = wxGetInstance();
     wndclass.hCursor       = ::LoadCursor(nullptr, IDC_ARROW);
-    wndclass.hbrBackground = (HBRUSH)wxUIntToPtr(bgBrushCol + 1);
+    wndclass.hbrBackground = hbrBackground;
     wndclass.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS | extraStyles;
 
 
@@ -765,12 +783,23 @@ wxApp::wxApp()
     {
         if ( GetComCtl32Version() < 610 )
         {
+            // Check if we have wx resources in this program: this is not
+            // mandatory, but recommended and could be the simplest way to
+            // resolve the problem when not using MSVC.
+            wxString maybeNoResources;
+            if ( !::LoadIcon(wxGetInstance(), wxT("wxICON_AAA")) )
+            {
+                maybeNoResources = " (unless you don't include wx/msw/wx.rc "
+                    "from your resource file intentionally, you should do it "
+                    "and use the manifest defined in it)";
+            }
+
             wxMessageBox
             (
-                R"(WARNING!
+                wxString::Format(R"(WARNING!
 
 This application doesn't use a correct manifest specifying
-the use of Common Controls Library v6.
+the use of Common Controls Library v6%s.
 
 This is deprecated and won't be supported in the future
 wxWidgets versions, however for now you can still set
@@ -779,9 +808,11 @@ https://docs.wxwidgets.org/latest/classwx_system_options.html
 for how to do it) to skip this check.
 
 Please use the appropriate manifest when building the
-application or contact us by posting to wx-dev@googlegroups.com
+application as described at
+https://docs.wxwidgets.org/latest/plat_msw_install.html#msw_manifest
+or contact us by posting to wx-dev@googlegroups.com
 if you believe not using the manifest should remain supported.
-)",
+)", maybeNoResources),
                 "wxWidgets Warning"
             );
         }

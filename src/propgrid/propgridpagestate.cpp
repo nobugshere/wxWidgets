@@ -285,8 +285,8 @@ void wxPropertyGridPageState::DoClear()
         for (unsigned int i = 0; i < m_regularArray.GetChildCount(); i++)
         {
             wxPGProperty* p = m_regularArray.Item(i);
-            wxPGRemoveItemFromVector<wxPGProperty*>(m_pPropGrid->m_deletedProperties, p);
-            wxPGRemoveItemFromVector<wxPGProperty*>(m_pPropGrid->m_removedProperties, p);
+            m_pPropGrid->m_deletedProperties.erase(p);
+            m_pPropGrid->m_removedProperties.erase(p);
         }
 
         m_regularArray.Empty();
@@ -476,8 +476,8 @@ wxPGProperty* wxPropertyGridPageState::BaseGetPropertyByLabel
 
 wxPGProperty* wxPropertyGridPageState::BaseGetPropertyByName( const wxString& name ) const
 {
-    wxPGHashMapS2P::const_iterator it = m_dictName.find(name);
-    return it != m_dictName.end() ? (wxPGProperty*) it->second : nullptr;
+    auto it = m_dictName.find(name);
+    return it != m_dictName.end() ? it->second : nullptr;
 }
 
 // -----------------------------------------------------------------------
@@ -494,7 +494,7 @@ void wxPropertyGridPageState::DoSetPropertyName( wxPGProperty* p,
         if ( !p->GetBaseName().empty() )
             m_dictName.erase( p->GetBaseName() );
         if ( !newName.empty() )
-            m_dictName[newName] = (void*) p;
+            m_dictName[newName] = p;
     }
 
     p->DoSetName(newName);
@@ -1250,14 +1250,8 @@ bool wxPropertyGridPageState::DoSetPropertyValueString( wxPGProperty* p, const w
         int flags = wxPG_REPORT_ERROR|wxPG_FULL_VALUE|wxPG_PROGRAMMATIC_VALUE;
 
         wxVariant variant = p->GetValueRef();
-        bool res;
 
-        if ( p->GetMaxLength() <= 0 )
-            res = p->StringToValue( variant, value, flags );
-        else
-            res = p->StringToValue( variant, value.Mid(0,p->GetMaxLength()), flags );
-
-        if ( res )
+        if ( p->StringToValue(variant, value, flags) )
         {
             p->SetValue(variant);
             if ( p == m_pPropGrid->GetSelection() && IsDisplayed() )
@@ -1480,15 +1474,12 @@ void wxPropertyGridPageState::DoSetPropertyValues( const wxVariantList& list, wx
         use_category = (wxPropertyCategory*)m_properties;
 
     // Let's iterate over the list of variants.
-    wxVariantList::const_iterator node;
     int numSpecialEntries = 0;
 
     //
     // Second pass for special entries
-    for ( node = list.begin(); node != list.end(); ++node )
+    for ( auto current : list )
     {
-        wxVariant *current = const_cast<wxVariant*>(*node);
-
         // Make sure it is wxVariant.
         wxASSERT( current );
         wxASSERT( wxStrcmp(current->GetClassInfo()->GetClassName(),wxS("wxVariant")) == 0 );
@@ -1548,10 +1539,8 @@ void wxPropertyGridPageState::DoSetPropertyValues( const wxVariantList& list, wx
 
     if ( numSpecialEntries )
     {
-        for ( node = list.begin(); node != list.end(); ++node )
+        for ( auto current : list )
         {
-            wxVariant *current = const_cast<wxVariant*>(*node);
-
             const wxString& name = current->GetName();
             if ( !name.empty() )
             {
@@ -1577,11 +1566,8 @@ void wxPropertyGridPageState::DoSetPropertyValues( const wxVariantList& list, wx
                                 wxASSERT( current->IsType(wxPG_VARIANT_TYPE_LIST) );
 
                                 wxVariantList& list2 = current->GetList();
-                                wxVariantList::const_iterator node2;
-
-                                for ( node2 = list2.begin(); node2 != list2.end(); ++node2 )
+                                for ( auto attr : list2 )
                                 {
-                                    wxVariant *attr = const_cast<wxVariant*>(*node2);
                                     foundProp->SetAttribute( attr->GetName(), *attr );
                                 }
                             }
@@ -1771,7 +1757,7 @@ wxPGProperty* wxPropertyGridPageState::DoInsert( wxPGProperty* parent, int index
     // Only add name to hashmap if parent is root or category
     if ( !property->GetBaseName().empty() &&
         (parentIsCategory || parentIsRoot) )
-        m_dictName[property->GetBaseName()] = (void*) property;
+        m_dictName[property->GetBaseName()] = property;
 
     VirtualHeightChanged();
 
@@ -1974,17 +1960,11 @@ void wxPropertyGridPageState::DoDelete( wxPGProperty* item, bool doDelete )
         // Prevent adding duplicates to the lists.
         if ( doDelete )
         {
-            if ( wxPGItemExistsInVector<wxPGProperty*>(pg->m_deletedProperties, item) )
-                return;
-
-            pg->m_deletedProperties.push_back(item);
+            pg->m_deletedProperties.insert(item);
         }
         else
         {
-            if ( wxPGItemExistsInVector<wxPGProperty*>(pg->m_removedProperties, item) )
-                return;
-
-            pg->m_removedProperties.push_back(item);
+            pg->m_removedProperties.insert(item);
         }
 
         // Rename the property and its children so it won't remain in the way
@@ -2069,23 +2049,14 @@ void wxPropertyGridPageState::DoDelete( wxPGProperty* item, bool doDelete )
     {
         // Remove the item from both lists of pending operations.
         // (Deleted item cannot be also the subject of further removal.)
-        wxPGRemoveItemFromVector<wxPGProperty*>(pg->m_deletedProperties, item);
-        wxASSERT_MSG( !wxPGItemExistsInVector<wxPGProperty*>(pg->m_deletedProperties, item),
-                    wxS("Too many occurrences of the item"));
-
-        wxPGRemoveItemFromVector<wxPGProperty*>(pg->m_removedProperties, item);
-        wxASSERT_MSG( !wxPGItemExistsInVector<wxPGProperty*>(pg->m_removedProperties, item),
-                    wxS("Too many occurrences of the item"));
-
+        pg->m_deletedProperties.erase(item);
+        pg->m_removedProperties.erase(item);
         delete item;
     }
     else
     {
         // Remove the item from the list of pending removals.
-        wxPGRemoveItemFromVector<wxPGProperty*>(pg->m_removedProperties, item);
-        wxASSERT_MSG( !wxPGItemExistsInVector<wxPGProperty*>(pg->m_removedProperties, item),
-                    wxS("Too many occurrences of the item"));
-
+        pg->m_removedProperties.erase(item);
         item->OnDetached(this, pg);
     }
 

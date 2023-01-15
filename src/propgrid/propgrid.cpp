@@ -213,9 +213,9 @@ wxPGGlobalVarsClass::~wxPGGlobalVarsClass()
 
     // Destroy editor class instances.
     // iterate over all the elements in the class
-    for( wxPGHashMapS2P::iterator vt_it = m_mapEditorClasses.begin(); vt_it != m_mapEditorClasses.end(); ++vt_it )
+    for( const auto& vt_it : m_mapEditorClasses )
     {
-        delete ((wxPGEditor*)vt_it->second);
+        delete vt_it.second;
     }
 
     // Make sure the global pointers have been reset
@@ -754,7 +754,7 @@ bool wxPropertyGrid::DoSelectAndEdit( wxPGProperty* prop,
         // send event
         DoClearSelection(false, wxPG_SEL_NO_REFRESH);
 
-        if ( !wxPGItemExistsInVector<int>(m_pState->m_editableColumns, colIndex) )
+        if ( m_pState->m_editableColumns.find(colIndex) == m_pState->m_editableColumns.end() )
         {
             res = DoAddToSelection(prop, selFlags);
         }
@@ -922,19 +922,13 @@ void wxPropertyGrid::MakeColumnEditable( unsigned int column,
          wxS("Set wxPG_PROP_READONLY property flag instead")
     );
 
-    wxVector<int>& cols = m_pState->m_editableColumns;
-
     if ( editable )
     {
-        cols.push_back(column);
+        m_pState->m_editableColumns.insert(column);
     }
     else
     {
-        for ( int i = cols.size() - 1; i > 0; i-- )
-        {
-            if ( cols[i] == (int)column )
-                cols.erase( cols.begin() + i );
-        }
+        m_pState->m_editableColumns.erase(column);
     }
 }
 
@@ -2961,8 +2955,8 @@ bool wxPropertyGrid::PerformValidation( wxPGProperty* p, wxVariant& pendingValue
     // Returns true if value passes all tests.
     //
 
-    m_validationInfo.m_failureBehavior = m_permanentValidationFailureBehavior;
-    m_validationInfo.m_isFailing = true;
+    m_validationInfo.SetFailureBehavior(m_permanentValidationFailureBehavior);
+    m_validationInfo.SetFailing(true);
 
     //
     // Variant list a special value that cannot be validated
@@ -3094,7 +3088,7 @@ bool wxPropertyGrid::PerformValidation( wxPGProperty* p, wxVariant& pendingValue
         pendingValue = value;
     }
 
-    m_validationInfo.m_isFailing = false;
+    m_validationInfo.SetFailing(false);
 
     return true;
 }
@@ -3166,7 +3160,7 @@ bool wxPropertyGrid::OnValidationFailure( wxPGProperty* property,
     wxON_BLOCK_EXIT_SET(m_inOnValidationFailure, false);
 
     wxWindow* editor = GetEditorControl();
-    int vfb = m_validationInfo.m_failureBehavior;
+    wxPGVFBFlags vfb = m_validationInfo.GetFailureBehavior();
 
     if ( m_inDoSelectProperty )
     {
@@ -3174,10 +3168,10 @@ bool wxPropertyGrid::OnValidationFailure( wxPGProperty* property,
         // messages, if some were already shown for this property.
         if ( property->HasFlag(wxPG_PROP_INVALID_VALUE) )
         {
-            m_validationInfo.m_failureBehavior =
+            m_validationInfo.SetFailureBehavior(
                 vfb & ~(wxPG_VFB_SHOW_MESSAGE |
                         wxPG_VFB_SHOW_MESSAGEBOX |
-                        wxPG_VFB_SHOW_MESSAGE_ON_STATUSBAR);
+                        wxPG_VFB_SHOW_MESSAGE_ON_STATUSBAR));
         }
     }
 
@@ -3201,7 +3195,7 @@ bool wxPropertyGrid::OnValidationFailure( wxPGProperty* property,
 
 bool wxPropertyGrid::DoOnValidationFailure( wxPGProperty* property, wxVariant& WXUNUSED(invalidValue) )
 {
-    int vfb = m_validationInfo.m_failureBehavior;
+    wxPGVFBFlags vfb = m_validationInfo.GetFailureBehavior();
 
     if ( vfb & wxPG_VFB_BEEP )
         ::wxBell();
@@ -3245,7 +3239,7 @@ bool wxPropertyGrid::DoOnValidationFailure( wxPGProperty* property, wxVariant& W
                 wxPG_VFB_SHOW_MESSAGEBOX |
                 wxPG_VFB_SHOW_MESSAGE_ON_STATUSBAR) )
     {
-        wxString msg = m_validationInfo.m_failureMessage;
+        wxString msg = m_validationInfo.GetFailureMessage();
 
         if ( msg.empty() )
             msg = _("You have entered invalid value. Press ESC to cancel editing.");
@@ -3287,7 +3281,7 @@ bool wxPropertyGrid::DoOnValidationFailure( wxPGProperty* property, wxVariant& W
 
 void wxPropertyGrid::DoOnValidationFailureReset( wxPGProperty* property )
 {
-    int vfb = m_validationInfo.m_failureBehavior;
+    wxPGVFBFlags vfb = m_validationInfo.GetFailureBehavior();
 
     if ( vfb & wxPG_VFB_MARK_CELL )
     {
@@ -3324,7 +3318,7 @@ void wxPropertyGrid::DoOnValidationFailureReset( wxPGProperty* property )
         DoHidePropertyError(property);
     }
 
-    m_validationInfo.m_isFailing = false;
+    m_validationInfo.SetFailing(false);
 }
 
 // -----------------------------------------------------------------------
@@ -3482,8 +3476,8 @@ bool wxPropertyGrid::DoEditorValidate()
     if ( guard.IsInside() )
         return false;
 
-    m_validationInfo.m_failureBehavior = m_permanentValidationFailureBehavior;
-    m_validationInfo.m_isFailing = true;
+    m_validationInfo.SetFailureBehavior(m_permanentValidationFailureBehavior);
+    m_validationInfo.SetFailing(true);
 
     wxPGProperty* selected = GetSelection();
     if ( selected )
@@ -3499,7 +3493,7 @@ bool wxPropertyGrid::DoEditorValidate()
         }
     }
 
-    m_validationInfo.m_isFailing = false;
+    m_validationInfo.SetFailing(false);
 #endif
     return true;
 }
@@ -3649,7 +3643,7 @@ bool wxPropertyGrid::HandleCustomEditorEvent( wxEvent &event )
                     // failing and value was not unspecified
                     if ( !valueIsPending &&
                          !pendingValue.IsNull() &&
-                         m_validationInfo.m_isFailing )
+                         m_validationInfo.IsFailing() )
                          valueIsPending = true;
                 }
                 else
@@ -3816,6 +3810,7 @@ void wxPropertyGrid::ImprovedClientToScreen( int* px, int* py ) const
     wxASSERT(px && py);
     CalcScrolledPosition(*px, *py, px, py);
     ClientToScreen( px, py );
+
 }
 
 // -----------------------------------------------------------------------
@@ -3867,9 +3862,7 @@ public:
     {
     }
 
-    virtual ~wxPropertyGridEditorEventForwarder()
-    {
-    }
+    virtual ~wxPropertyGridEditorEventForwarder() = default;
 
 private:
     bool ProcessEvent( wxEvent& event ) override
@@ -4694,7 +4687,7 @@ bool wxPropertyGrid::SendEvent( wxEventType eventType, wxPGProperty* p,
     {
         wxASSERT( pValue );
         evt.SetCanVeto(true);
-        m_validationInfo.m_pValue = pValue;
+        m_validationInfo.SetValue(pValue ? *pValue : wxVariant());
         evt.SetupValidationInfo();
     }
     else
@@ -5503,29 +5496,44 @@ void wxPropertyGrid::OnMouseUpChild( wxMouseEvent &event )
 // wxPropertyGrid keyboard event handling
 // -----------------------------------------------------------------------
 
-int wxPropertyGrid::KeyEventToActions(wxKeyEvent &event, int* pSecond) const
+std::pair<int, int> wxPropertyGrid::KeyEventToActions(const wxKeyEvent& event) const
 {
     // Translates wxKeyEvent to wxPG_ACTION_XXX
 
     int keycode = event.GetKeyCode();
     int modifiers = event.GetModifiers();
 
-    wxASSERT( !(modifiers&~(0xFFFF)) );
+    wxASSERT(!(modifiers & ~(0xFFFF)));
 
     int hashMapKey = (keycode & 0xFFFF) | ((modifiers & 0xFFFF) << 16);
 
-    wxPGHashMapI2I::const_iterator it = m_actionTriggers.find(hashMapKey);
+    auto it = m_actionTriggers.find(hashMapKey);
 
     if ( it == m_actionTriggers.end() )
-        return 0;
+        return std::make_pair(0, 0);
+
+    wxInt32 actions = it->second;
+    return std::make_pair(actions & 0xFFFF, (actions >> 16) & 0xFFFF);
+}
+
+#if WXWIN_COMPATIBILITY_3_2
+int wxPropertyGrid::KeyEventToActions(wxKeyEvent &event, int* pSecond) const
+{
+    // Translates wxKeyEvent to wxPG_ACTION_XXX
+    std::pair<int, int> actions = KeyEventToActions(event);
 
     if ( pSecond )
     {
-        int second = (it->second>>16) & 0xFFFF;
-        *pSecond = second;
+        *pSecond = actions.second;
     }
 
-    return (it->second & 0xFFFF);
+    return actions.first;
+}
+#endif // WXWIN_COMPATIBILITY_3_2
+
+int wxPropertyGrid::KeyEventToAction(wxKeyEvent& event) const
+{
+    return KeyEventToActions(event).first;
 }
 
 void wxPropertyGrid::AddActionTrigger( int action, int keycode, int modifiers )
@@ -5534,7 +5542,7 @@ void wxPropertyGrid::AddActionTrigger( int action, int keycode, int modifiers )
 
     int hashMapKey = (keycode & 0xFFFF) | ((modifiers & 0xFFFF) << 16);
 
-    wxPGHashMapI2I::iterator it = m_actionTriggers.find(hashMapKey);
+    auto it = m_actionTriggers.find(hashMapKey);
 
     if ( it != m_actionTriggers.end() )
     {
@@ -5552,25 +5560,18 @@ void wxPropertyGrid::AddActionTrigger( int action, int keycode, int modifiers )
 
 void wxPropertyGrid::ClearActionTriggers( int action )
 {
-    bool didSomething;
-
-    do
+    auto it = m_actionTriggers.begin();
+    while ( it != m_actionTriggers.end() )
     {
-        didSomething = false;
-
-        for (wxPGHashMapI2I::iterator it = m_actionTriggers.begin();
-              it != m_actionTriggers.end();
-              ++it )
+        if ( it->second == action )
         {
-            if ( it->second == action )
-            {
-                m_actionTriggers.erase(it);
-                didSomething = true;
-                break;
-            }
+            it = m_actionTriggers.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
-    while ( didSomething );
 }
 
 void wxPropertyGrid::HandleKeyEvent( wxKeyEvent &event, bool fromChild )
@@ -5648,8 +5649,9 @@ void wxPropertyGrid::HandleKeyEvent( wxKeyEvent &event, bool fromChild )
         return;
     }
 
+    int action;
     int secondAction;
-    int action = KeyEventToActions(event, &secondAction);
+    std::tie(action, secondAction) = KeyEventToActions(event);
 
     if ( editorFocused && action == wxPG_ACTION_CANCEL_EDIT )
     {
@@ -5674,13 +5676,7 @@ void wxPropertyGrid::HandleKeyEvent( wxKeyEvent &event, bool fromChild )
 
     // Except for TAB, ESC, and any keys specifically dedicated to
     // wxPropertyGrid itself, handle child control events in child control.
-    if ( fromChild &&
-#if WXWIN_COMPATIBILITY_3_0
-         // Deprecated: use a hash set instead.
-         !wxPGItemExistsInVector<int>(m_dedicatedKeys, keycode) )
-#else
-         m_dedicatedKeys.find(keycode) == m_dedicatedKeys.end() )
-#endif
+    if ( fromChild && m_dedicatedKeys.count(keycode) == 0 )
     {
         // Only propagate event if it had modifiers
         if ( !event.HasModifiers() )
@@ -5816,8 +5812,7 @@ bool wxPropertyGrid::ButtonTriggerKeyTest( int action, wxKeyEvent& event )
 {
     if ( action == -1 )
     {
-        int secondAction;
-        action = KeyEventToActions(event, &secondAction);
+        action = KeyEventToActions(event).first;
     }
 
     // Does the keycode trigger button?
@@ -5880,7 +5875,7 @@ void wxPropertyGrid::OnIdle( wxIdleEvent& WXUNUSED(event) )
     {
         size_t cntBefore = cntAfter;
 
-        DeleteProperty(m_deletedProperties[0]);
+        DeleteProperty(*(m_deletedProperties.begin()));
 
         cntAfter = m_deletedProperties.size();
         wxASSERT_MSG( cntAfter <= cntBefore,
@@ -5894,7 +5889,7 @@ void wxPropertyGrid::OnIdle( wxIdleEvent& WXUNUSED(event) )
     {
         size_t cntBefore = cntAfter;
 
-        RemoveProperty(m_removedProperties[0]);
+        RemoveProperty(*(m_removedProperties.begin()));
 
         cntAfter = m_removedProperties.size();
         wxASSERT_MSG( cntAfter <= cntBefore,
@@ -6071,7 +6066,7 @@ wxPGEditor* wxPropertyGrid::DoRegisterEditorClass( wxPGEditor* editorClass,
                                                    const wxString& editorName,
                                                    bool noDefCheck )
 {
-    wxASSERT( editorClass );
+    wxCHECK( editorClass, nullptr );
 
     if ( !noDefCheck && wxPGGlobalVars->m_mapEditorClasses.empty() )
         RegisterDefaultEditors();
@@ -6079,7 +6074,7 @@ wxPGEditor* wxPropertyGrid::DoRegisterEditorClass( wxPGEditor* editorClass,
     wxString name = editorName.empty() ? editorClass->GetName() : editorName;
 
     // Existing editor under this name?
-    wxPGHashMapS2P::iterator vt_it = wxPGGlobalVars->m_mapEditorClasses.find(name);
+    auto vt_it = wxPGGlobalVars->m_mapEditorClasses.find(name);
 
     if ( vt_it != wxPGGlobalVars->m_mapEditorClasses.end() )
     {
@@ -6089,10 +6084,10 @@ wxPGEditor* wxPropertyGrid::DoRegisterEditorClass( wxPGEditor* editorClass,
     }
 
     wxCHECK_MSG( vt_it == wxPGGlobalVars->m_mapEditorClasses.end(),
-                 (wxPGEditor*) vt_it->second,
+                 vt_it->second,
                  wxS("Editor with given name was already registered") );
 
-    wxPGGlobalVars->m_mapEditorClasses[name] = (void*)editorClass;
+    wxPGGlobalVars->m_mapEditorClasses[name] = editorClass;
 
     return editorClass;
 }
@@ -6128,10 +6123,6 @@ void wxPropertyGrid::RegisterDefaultEditors()
 
 wxPGStringTokenizer::wxPGStringTokenizer( const wxString& str, wxChar delimiter )
     : m_str(str), m_curPos(str.begin()), m_delimiter(delimiter)
-{
-}
-
-wxPGStringTokenizer::~wxPGStringTokenizer()
 {
 }
 
@@ -6195,65 +6186,6 @@ bool wxPGStringTokenizer::HasMoreTokens()
 wxString wxPGStringTokenizer::GetNextToken()
 {
     return m_readyToken;
-}
-
-// -----------------------------------------------------------------------
-// wxPGChoiceEntry
-// -----------------------------------------------------------------------
-
-wxPGChoiceEntry::wxPGChoiceEntry()
-    : wxPGCell(), m_value(wxPG_INVALID_VALUE)
-{
-}
-
-// -----------------------------------------------------------------------
-// wxPGChoicesData
-// -----------------------------------------------------------------------
-
-wxPGChoicesData::wxPGChoicesData()
-{
-}
-
-wxPGChoicesData::~wxPGChoicesData()
-{
-    Clear();
-}
-
-void wxPGChoicesData::Clear()
-{
-    m_items.clear();
-}
-
-void wxPGChoicesData::CopyDataFrom( wxPGChoicesData* data )
-{
-    wxASSERT( m_items.empty() );
-
-    m_items = data->m_items;
-}
-
-wxPGChoiceEntry& wxPGChoicesData::Insert( int index,
-                                          const wxPGChoiceEntry& item )
-{
-    wxVector<wxPGChoiceEntry>::iterator it;
-    if ( index == -1 )
-    {
-        it = m_items.end();
-        index = (int) m_items.size();
-    }
-    else
-    {
-        it = m_items.begin() + index;
-    }
-
-    m_items.insert(it, item);
-
-    wxPGChoiceEntry& ownEntry = m_items[index];
-
-    // Need to fix value?
-    if ( ownEntry.GetValue() == wxPG_INVALID_VALUE )
-        ownEntry.SetValue(index);
-
-    return ownEntry;
 }
 
 // -----------------------------------------------------------------------
@@ -6387,10 +6319,9 @@ void wxPropertyGridPopulator::SetGrid( wxPropertyGrid* pg )
 wxPropertyGridPopulator::~wxPropertyGridPopulator()
 {
     // Free unused sets of choices
-    for( wxPGHashMapS2P::iterator it = m_dictIdChoices.begin(); it != m_dictIdChoices.end(); ++it )
+    for( const auto& it : m_dictIdChoices )
     {
-        wxPGChoicesData* data = (wxPGChoicesData*) it->second;
-        data->DecRef();
+        it.second->DecRef();
     }
 
     if ( m_pg )
@@ -6455,98 +6386,93 @@ void wxPropertyGridPopulator::AddChildren( wxPGProperty* property )
 wxPGChoices wxPropertyGridPopulator::ParseChoices( const wxString& choicesString,
                                                    const wxString& idString )
 {
-    wxPGChoices choices;
-
     // Using id?
     if ( choicesString[0] == wxT('@') )
     {
         wxString ids = choicesString.substr(1);
-        wxPGHashMapS2P::iterator it = m_dictIdChoices.find(ids);
+        auto it = m_dictIdChoices.find(ids);
         if ( it == m_dictIdChoices.end() )
-            ProcessError(wxString::Format(wxS("No choices defined for id '%s'"),ids));
-        else
-            choices.AssignData((wxPGChoicesData*)it->second);
+        {
+            ProcessError(wxString::Format(wxS("No choices defined for id '%s'"), ids));
+            return wxPGChoices();
+        }
+
+        return wxPGChoices(it->second);
     }
-    else
+
+    if ( !idString.empty() )
     {
-        bool found = false;
-        if ( !idString.empty() )
+        auto it = m_dictIdChoices.find(idString);
+        if ( it != m_dictIdChoices.end() )
         {
-            wxPGHashMapS2P::iterator it = m_dictIdChoices.find(idString);
-            if ( it != m_dictIdChoices.end() )
-            {
-                choices.AssignData((wxPGChoicesData*)it->second);
-                found = true;
-            }
-        }
-
-        if ( !found )
-        {
-            // Parse choices string
-            wxString label;
-            wxString value;
-            int state = 0;
-            bool labelValid = false;
-
-            for ( wxUniChar c : choicesString )
-            {
-                if ( state != 1 )
-                {
-                    if ( c == wxS('"') )
-                    {
-                        if ( labelValid )
-                        {
-                            long l;
-                            if ( !value.ToLong(&l, 0) ) l = wxPG_INVALID_VALUE;
-                            choices.Add(label, l);
-                        }
-                        labelValid = false;
-                        //wxLogDebug(wxS("%s, %s"),label,value);
-                        value.clear();
-                        label.clear();
-                        state = 1;
-                    }
-                    else if ( c == wxS('=') )
-                    {
-                        if ( labelValid )
-                        {
-                            state = 2;
-                        }
-                    }
-                    else if ( state == 2 && (wxIsalnum(c) || c == wxS('x')) )
-                    {
-                        value << c;
-                    }
-                }
-                else
-                {
-                    if ( c == wxS('"') )
-                    {
-                        state = 0;
-                        labelValid = true;
-                    }
-                    else
-                        label << c;
-                }
-            }
-
-            if ( labelValid )
-            {
-                long l;
-                if ( !value.ToLong(&l, 0) ) l = wxPG_INVALID_VALUE;
-                choices.Add(label, l);
-            }
-
-            if ( !choices.IsOk() )
-            {
-                choices.EnsureData();
-            }
-
-            // Assign to id
-            if ( !idString.empty() )
-                m_dictIdChoices[idString] = choices.GetData();
+            return wxPGChoices(it->second);
         }
     }
+
+    // Parse choices string
+    wxPGChoices choices;
+    wxString label;
+    wxString value;
+    int state = 0;
+    bool labelValid = false;
+
+    for ( wxUniChar c : choicesString )
+    {
+        if ( state != 1 )
+        {
+            if ( c == wxS('"') )
+            {
+                if ( labelValid )
+                {
+                    long l;
+                    if ( !value.ToLong(&l, 0) ) l = wxPG_INVALID_VALUE;
+                    choices.Add(label, l);
+                }
+                labelValid = false;
+                //wxLogDebug(wxS("%s, %s"),label,value);
+                value.clear();
+                label.clear();
+                state = 1;
+            }
+            else if ( c == wxS('=') )
+            {
+                if ( labelValid )
+                {
+                    state = 2;
+                }
+            }
+            else if ( state == 2 && (wxIsalnum(c) || c == wxS('x')) )
+            {
+                value << c;
+            }
+        }
+        else
+        {
+            if ( c == wxS('"') )
+            {
+                state = 0;
+                labelValid = true;
+            }
+            else
+                label << c;
+        }
+    }
+
+    if ( labelValid )
+    {
+        long l;
+        if ( !value.ToLong(&l, 0) ) l = wxPG_INVALID_VALUE;
+        choices.Add(label, l);
+    }
+
+    if ( !choices.IsOk() )
+    {
+        choices.EnsureData();
+    }
+
+    // Assign to id
+    if ( !idString.empty() )
+        m_dictIdChoices[idString] = choices.GetData();
 
     return choices;
 }

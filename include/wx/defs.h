@@ -639,7 +639,7 @@ typedef short int WXTYPE;
 /*
     Similar macros but for gcc-specific warnings.
  */
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
 #   define wxGCC_ONLY_WARNING_SUPPRESS(x) wxGCC_WARNING_SUPPRESS(x)
 #   define wxGCC_ONLY_WARNING_RESTORE(x) wxGCC_WARNING_RESTORE(x)
 #else
@@ -849,13 +849,6 @@ typedef short int WXTYPE;
 /*  ---------------------------------------------------------------------------- */
 /*  compiler specific settings */
 /*  ---------------------------------------------------------------------------- */
-
-/*  where should i put this? we need to make sure of this as it breaks */
-/*  the <iostream> code. */
-#if defined(__WXDEBUG__)
-#    undef wxUSE_DEBUG_NEW_ALWAYS
-#    define wxUSE_DEBUG_NEW_ALWAYS 0
-#endif
 
 #include "wx/types.h"
 

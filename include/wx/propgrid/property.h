@@ -21,6 +21,8 @@
 #include "wx/font.h"
 #include "wx/validate.h"
 
+#include <unordered_map>
+
 // -----------------------------------------------------------------------
 
 #define wxNullProperty  ((wxPGProperty*)nullptr)
@@ -108,6 +110,7 @@ public:
 
     // Paints property category selection rectangle.
 #if WXWIN_COMPATIBILITY_3_0
+    wxDEPRECATED_MSG("Use DrawCaptionSelectionRect(wxWindow*, wxDC&, ...) instead")
     virtual void DrawCaptionSelectionRect( wxDC& dc,
                                            int x, int y,
                                            int w, int h ) const;
@@ -294,7 +297,7 @@ private:
 class WXDLLIMPEXP_PROPGRID wxPGAttributeStorage
 {
 public:
-    wxPGAttributeStorage();
+    wxPGAttributeStorage() = default;
     wxPGAttributeStorage(const wxPGAttributeStorage& other);
     ~wxPGAttributeStorage();
 
@@ -302,38 +305,14 @@ public:
 
     void Set( const wxString& name, const wxVariant& value );
     unsigned int GetCount() const { return (unsigned int) m_map.size(); }
-    wxVariant FindValue( const wxString& name ) const
-    {
-        wxPGHashMapS2P::const_iterator it = m_map.find(name);
-        if ( it != m_map.end() )
-        {
-            wxVariantData* data = (wxVariantData*) it->second;
-            data->IncRef();
-            return wxVariant(data, it->first);
-        }
-        return wxVariant();
-    }
+    wxVariant FindValue(const wxString& name) const;
 
-    typedef wxPGHashMapS2P::const_iterator const_iterator;
-    const_iterator StartIteration() const
-    {
-        return m_map.begin();
-    }
-    bool GetNext( const_iterator& it, wxVariant& variant ) const
-    {
-        if ( it == m_map.end() )
-            return false;
-
-        wxVariantData* data = (wxVariantData*) it->second;
-        data->IncRef();
-        variant.SetData(data);
-        variant.SetName(it->first);
-        ++it;
-        return true;
-    }
+    typedef std::unordered_map<wxString, wxVariantData*>::const_iterator const_iterator;
+    const_iterator StartIteration() const;
+    bool GetNext(const_iterator& it, wxVariant& variant) const;
 
 protected:
-    wxPGHashMapS2P  m_map;
+    std::unordered_map<wxString, wxVariantData*> m_map;
 };
 
 
@@ -636,33 +615,15 @@ class WXDLLIMPEXP_PROPGRID wxPGChoiceEntry : public wxPGCell
 {
 public:
     wxPGChoiceEntry();
-    wxPGChoiceEntry(const wxPGChoiceEntry& other)
-        : wxPGCell(other)
-        , m_value(other.m_value)
-    {
-    }
-    wxPGChoiceEntry( const wxString& label,
-                     int value = wxPG_INVALID_VALUE )
-        : wxPGCell()
-        , m_value(value)
-    {
-        SetText(label);
-    }
+    wxPGChoiceEntry(const wxPGChoiceEntry& other);
+    wxPGChoiceEntry(const wxString& label, int value = wxPG_INVALID_VALUE);
 
     virtual ~wxPGChoiceEntry() = default;
 
     void SetValue( int value ) { m_value = value; }
     int GetValue() const { return m_value; }
 
-    wxPGChoiceEntry& operator=( const wxPGChoiceEntry& other )
-    {
-        if ( this != &other )
-        {
-            Ref(other);
-        }
-        m_value = other.m_value;
-        return *this;
-    }
+    wxPGChoiceEntry& operator=(const wxPGChoiceEntry& other);
 
 protected:
     int m_value;
@@ -676,7 +637,7 @@ class WXDLLIMPEXP_PROPGRID wxPGChoicesData : public wxObjectRefData
     friend class wxPGChoices;
 public:
     // Constructor sets m_refCount to 1.
-    wxPGChoicesData();
+    wxPGChoicesData() = default;
 
     void CopyDataFrom( wxPGChoicesData* data );
 
@@ -2109,7 +2070,7 @@ public:
 
     // Constructor.
     wxPGRootProperty( const wxString& name = wxS("<Root>") );
-    virtual ~wxPGRootProperty();
+    virtual ~wxPGRootProperty() = default;
 
     virtual bool StringToValue( wxVariant&, const wxString&, int ) const override
     {
@@ -2133,7 +2094,7 @@ public:
 
     wxPropertyCategory( const wxString& label,
                         const wxString& name = wxPG_LABEL );
-    ~wxPropertyCategory();
+    virtual ~wxPropertyCategory() = default;
 
     int GetTextExtent( const wxWindow* wnd, const wxFont& font ) const;
 
