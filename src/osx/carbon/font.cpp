@@ -258,10 +258,13 @@ wxFontRefData::wxFontRefData(const wxFontInfo& info)
 {
     m_info.Init();
 
+    wxFontFamily family = info.GetFamily();
+    if (family == wxFONTFAMILY_DEFAULT)
+        family = wxFONTFAMILY_SWISS;
+    SetFamily(family);
+
     if ( info.HasFaceName() )
         SetFaceName(info.GetFaceName());
-    else
-        SetFamily(info.GetFamily());
 
     m_info.SetSizeOrDefault(info.GetFractionalPointSize());
     SetNumericWeight(info.GetNumericWeight());
@@ -718,7 +721,7 @@ wxSize wxFont::GetPixelSize() const
     wxDouble width, height = 0;
     dc->GetTextExtent(wxT("g"), &width, &height, nullptr, nullptr);
     delete dc;
-    return wxSize((int)width, (int)height);
+    return wxSize(wxRound(width), wxRound(height));
 #else
     return wxFontBase::GetPixelSize();
 #endif

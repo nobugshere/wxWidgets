@@ -24,6 +24,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #ifndef SWIG
 extern WXDLLIMPEXP_DATA_PROPGRID(const char) wxPropertyGridNameStr[];
@@ -62,7 +63,7 @@ public:
     std::unordered_map<wxString, wxPGEditor*> m_mapEditorClasses;
 
 #if wxUSE_VALIDATORS
-    wxVector<wxValidator*>  m_arrValidators; // These wxValidators need to be freed
+    std::vector<wxValidator*> m_arrValidators; // These wxValidators need to be freed
 #endif
 
     wxPGChoices*        m_fontFamilyChoices;
@@ -72,32 +73,26 @@ public:
 
     wxPGChoices         m_boolChoices;
 
+#if WXWIN_COMPATIBILITY_3_2
     // Some shared variants
-#if WXWIN_COMPATIBILITY_3_0
-    wxVariant           m_vEmptyString;
-    wxVariant           m_vZero;
-    wxVariant           m_vMinusOne;
-    wxVariant           m_vTrue;
-    wxVariant           m_vFalse;
-#else
-    const wxVariant     m_vEmptyString;
-    const wxVariant     m_vZero;
-    const wxVariant     m_vMinusOne;
-    const wxVariant     m_vTrue;
-    const wxVariant     m_vFalse;
-#endif // WXWIN_COMPATIBILITY_3_0
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxVariant     m_vEmptyString;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxVariant     m_vZero;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxVariant     m_vMinusOne;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxVariant     m_vTrue;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxVariant     m_vFalse;)
 
     // Cached constant strings
-    const wxString      m_strstring;
-    const wxString      m_strlong;
-    const wxString      m_strbool;
-    const wxString      m_strlist;
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strstring;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strlong;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strbool;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strlist;)
 
-    const wxString      m_strDefaultValue;
-    const wxString      m_strMin;
-    const wxString      m_strMax;
-    const wxString      m_strUnits;
-    const wxString      m_strHint;
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strDefaultValue;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strMin;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strMax;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strUnits;)
+    wxDEPRECATED_BUT_USED_INTERNALLY(const wxString      m_strHint;)
+#endif // WXWIN_COMPATIBILITY_3_2
 
     // If true then some things are automatically translated
     bool                m_autoGetTranslation;
@@ -112,15 +107,37 @@ public:
     int HasExtraStyle( int style ) const { return (m_extraStyle & style); }
 };
 
-extern WXDLLIMPEXP_DATA_PROPGRID(wxPGGlobalVarsClass*) wxPGGlobalVars;
+// Internal class providing access to the global wxPGGlobalVars instance.
+class WXDLLIMPEXP_PROPGRID wxPGGlobalVarsPtr
+{
+public:
+    wxPGGlobalVarsClass* operator->() const;
+};
 
-#define wxPGVariant_EmptyString     (wxPGGlobalVars->m_vEmptyString)
-#define wxPGVariant_Zero            (wxPGGlobalVars->m_vZero)
-#define wxPGVariant_MinusOne        (wxPGGlobalVars->m_vMinusOne)
-#define wxPGVariant_True            (wxPGGlobalVars->m_vTrue)
-#define wxPGVariant_False           (wxPGGlobalVars->m_vFalse)
+extern WXDLLIMPEXP_DATA_PROPGRID(wxPGGlobalVarsPtr) wxPGGlobalVars;
 
-#define wxPGVariant_Bool(A)     (A?wxPGVariant_True:wxPGVariant_False)
+#if WXWIN_COMPATIBILITY_3_2
+#ifdef wxPG_MUST_DEPRECATE_MACRO_NAME
+#pragma deprecated(wxPGVariant_EmptyString)
+#pragma deprecated(wxPGVariant_Zero)
+#pragma deprecated(wxPGVariant_MinusOne)
+#pragma deprecated(wxPGVariant_True)
+#pragma deprecated(wxPGVariant_False)
+#pragma deprecated(wxPGVariant_Bool)
+#endif
+#define wxPGVariant_EmptyString wxPG_DEPRECATED_MACRO_VALUE(wxVariant(wxString()),\
+    "wxPGVariant_EmptyString is deprecated. Use wxVariant(wxString()) instead.")
+#define wxPGVariant_Zero wxPG_DEPRECATED_MACRO_VALUE(wxVariant(0L),\
+    "wxPGVariant_Zero is deprecated. Use wxVariant(0L) instead.")
+#define wxPGVariant_MinusOne wxPG_DEPRECATED_MACRO_VALUE(wxVariant(-1L),\
+    "wxPGVariant_MinusOne is deprecated. Use wxVariant(-1L) instead.")
+#define wxPGVariant_True wxPG_DEPRECATED_MACRO_VALUE(wxVariant(true),\
+    "wxPGVariant_True is deprecated. Use wxVariant(true) instead.")
+#define wxPGVariant_False wxPG_DEPRECATED_MACRO_VALUE(wxVariant(false),\
+    "wxPGVariant_False is deprecated. Use wxVariant(false) instead.")
+#define wxPGVariant_Bool(A) wxPG_DEPRECATED_MACRO_VALUE(wxVariant(A),\
+    "wxPGVariant_Bool is deprecated. Use wxVariant(A) instead.")
+#endif // WXWIN_COMPATIBILITY_3_2
 
 // When wxPG is loaded dynamically after the application is already running
 // then the built-in module system won't pick this one up.  Add it manually.
@@ -290,10 +307,10 @@ wxPG_EX_WINDOW_STYLE_MASK = wxPG_EX_WINDOW_PG_STYLE_MASK|wxPG_EX_WINDOW_PGMAN_ST
 };
 
 // Combines various styles.
-#define wxPG_DEFAULT_STYLE          (0)
+constexpr long wxPG_DEFAULT_STYLE = 0L;
 
 // Combines various styles.
-#define wxPGMAN_DEFAULT_STYLE       (0)
+constexpr long wxPGMAN_DEFAULT_STYLE = 0L;
 
 // -----------------------------------------------------------------------
 
@@ -527,57 +544,6 @@ enum wxPG_SET_SPLITTER_POSITION_SPLITTER_FLAGS
 
 
 // -----------------------------------------------------------------------
-
-// Internal flags
-enum wxPG_INTERNAL_FLAGS
-{
-    wxPG_FL_INITIALIZED                 =     0x0001,
-    // Set when creating editor controls if it was clicked on.
-    wxPG_FL_ACTIVATION_BY_CLICK         =     0x0002,
-    wxPG_FL_DONT_CENTER_SPLITTER        =     0x0004,
-    wxPG_FL_FOCUSED                     =     0x0008,
-    wxPG_FL_MOUSE_CAPTURED              =     0x0010,
-    wxPG_FL_MOUSE_INSIDE                =     0x0020,
-    wxPG_FL_VALUE_MODIFIED              =     0x0040,
-    // don't clear background of m_wndEditor
-    wxPG_FL_PRIMARY_FILLS_ENTIRE        =     0x0080,
-    // currently active editor uses custom image
-    wxPG_FL_CUR_USES_CUSTOM_IMAGE       =     0x0100,
-    // cell colours override selection colours for selected cell
-    wxPG_FL_CELL_OVERRIDES_SEL          =     0x0200,
-    wxPG_FL_SCROLLED                    =     0x0400,
-    // set when all added/inserted properties get hideable flag
-    wxPG_FL_ADDING_HIDEABLES            =     0x0800,
-    // Disables showing help strings on statusbar.
-    wxPG_FL_NOSTATUSBARHELP             =     0x1000,
-    // Marks that we created the state, so we have to destroy it too.
-    wxPG_FL_CREATEDSTATE                =     0x2000,
-    // Set if wxPGMan requires redrawing of description text box.
-    wxPG_FL_DESC_REFRESH_REQUIRED       =     0x8000,
-    // Set if contained in wxPropertyGridManager
-    wxPG_FL_IN_MANAGER                  = 0x00020000,
-    // Set after wxPropertyGrid is shown in its initial good size
-    wxPG_FL_GOOD_SIZE_SET               = 0x00040000,
-    // Set when in SelectProperty.
-    wxPG_FL_IN_SELECT_PROPERTY          = 0x00100000,
-    // Set when help string is shown in status bar
-    wxPG_FL_STRING_IN_STATUSBAR         = 0x00200000,
-    // Auto sort is enabled (for categorized mode)
-    wxPG_FL_CATMODE_AUTO_SORT           = 0x01000000,
-    // Set after page has been inserted to manager
-    wxPG_MAN_FL_PAGE_INSERTED           = 0x02000000,
-    // Active editor control is abnormally large
-    wxPG_FL_ABNORMAL_EDITOR             = 0x04000000,
-    // Recursion guard for HandleCustomEditorEvent
-    wxPG_FL_IN_HANDLECUSTOMEDITOREVENT  = 0x08000000,
-    wxPG_FL_VALUE_CHANGE_IN_EVENT       = 0x10000000,
-    // Editor control width should not change on resize
-    wxPG_FL_FIXED_WIDTH_EDITOR          = 0x20000000,
-    // Width of panel can be different from width of grid
-    wxPG_FL_HAS_VIRTUAL_WIDTH           = 0x40000000,
-    // Prevents RecalculateVirtualSize re-entrancy
-    wxPG_FL_RECALCULATING_VIRTUAL_SIZE  = 0x80000000
-};
 
 #if !defined(__wxPG_SOURCE_FILE__)
     // Reduce compile time, but still include in user app
@@ -1259,6 +1225,52 @@ public:
     // Mostly useful for page switching.
     void SwitchState( wxPropertyGridPageState* pNewState );
 
+    // Internal flags
+    enum wxPG_INTERNAL_FLAGS : long
+    {
+        wxPG_FL_INITIALIZED           = 0x0001,
+        // Set when creating editor controls if it was clicked on.
+        wxPG_FL_ACTIVATION_BY_CLICK   = 0x0002,
+        wxPG_FL_FOCUSED               = 0x0004,
+        wxPG_FL_MOUSE_CAPTURED        = 0x0008,
+        wxPG_FL_MOUSE_INSIDE          = 0x0010,
+        wxPG_FL_VALUE_MODIFIED        = 0x0020,
+        // don't clear background of m_wndEditor
+        wxPG_FL_PRIMARY_FILLS_ENTIRE  = 0x0040,
+        // currently active editor uses custom image
+        wxPG_FL_CUR_USES_CUSTOM_IMAGE = 0x0080,
+        // cell colours override selection colours for selected cell
+        wxPG_FL_CELL_OVERRIDES_SEL    = 0x0100,
+        wxPG_FL_SCROLLED              = 0x0200,
+        // set when all added/inserted properties get hideable flag
+        wxPG_FL_ADDING_HIDEABLES      = 0x0400,
+        // Disables showing help strings on statusbar.
+        wxPG_FL_NOSTATUSBARHELP       = 0x0800,
+        // Marks that we created the state, so we have to destroy it too.
+        wxPG_FL_CREATEDSTATE          = 0x1000,
+        // Set if contained in wxPropertyGridManager
+        wxPG_FL_IN_MANAGER            = 0x2000,
+        // Set after wxPropertyGrid is shown in its initial good size
+        wxPG_FL_GOOD_SIZE_SET         = 0x4000,
+        // Set when in SelectProperty.
+        wxPG_FL_IN_SELECT_PROPERTY    = 0x8000,
+        // Set when help string is shown in status bar
+        wxPG_FL_STRING_IN_STATUSBAR        = 0x00010000,
+        // Auto sort is enabled (for categorized mode)
+        wxPG_FL_CATMODE_AUTO_SORT          = 0x00020000,
+        // Active editor control is abnormally large
+        wxPG_FL_ABNORMAL_EDITOR            = 0x00040000,
+        // Recursion guard for HandleCustomEditorEvent
+        wxPG_FL_IN_HANDLECUSTOMEDITOREVENT = 0x00080000,
+        wxPG_FL_VALUE_CHANGE_IN_EVENT      = 0x00100000,
+        // Editor control width should not change on resize
+        wxPG_FL_FIXED_WIDTH_EDITOR         = 0x00200000,
+        // Width of panel can be different from width of grid
+        wxPG_FL_HAS_VIRTUAL_WIDTH          = 0x00400000,
+        // Prevents RecalculateVirtualSize re-entrancy
+        wxPG_FL_RECALCULATING_VIRTUAL_SIZE = 0x00800000
+    };
+
     long GetInternalFlags() const { return m_iFlags; }
     bool HasInternalFlag( long flag ) const
         { return (m_iFlags & flag) != 0; }
@@ -1560,7 +1572,7 @@ protected:
 
 #if !WXWIN_COMPATIBILITY_3_0
     // List of editors and their event handlers to be deleted in idle event handler.
-    wxVector<wxObject*> m_deletedEditorObjects;
+    std::vector<wxObject*> m_deletedEditorObjects;
 #endif
 
     // List of key codes that will not be handed over to editor controls.
@@ -1678,15 +1690,15 @@ protected:
     wxPGCell            m_categoryDefaultCell;
 
     // Backup of selected property's cells
-    wxVector<wxPGCell>  m_propCellsBackup;
+    std::vector<wxPGCell> m_propCellsBackup;
 
     // NB: These *cannot* be moved to globals.
 
     // labels when properties use common values
-    wxVector<wxPGCommonValue*>  m_commonValues;
+    std::vector<wxPGCommonValue*> m_commonValues;
 
     // array of live events
-    wxVector<wxPropertyGridEvent*>  m_liveEvents;
+    std::vector<wxPropertyGridEvent*> m_liveEvents;
 
     // Which cv selection really sets value to unspecified?
     int                 m_cvUnspecified;
@@ -2215,33 +2227,11 @@ protected:
     wxPropertyGridPageState*    m_state;
 
     // Tree-hierarchy of added properties (that can have children).
-    wxVector<wxPGProperty*> m_propHierarchy;
+    std::vector<wxPGProperty*> m_propHierarchy;
 
     // Hashmap for string-id to wxPGChoicesData mapping.
     std::unordered_map<wxString, wxPGChoicesData*> m_dictIdChoices;
 };
-
-// -----------------------------------------------------------------------
-
-//
-// Undefine macros that are not needed outside propertygrid sources
-//
-#ifndef __wxPG_SOURCE_FILE__
-    #undef wxPG_FL_DESC_REFRESH_REQUIRED
-    #undef wxPG_FL_CREATEDSTATE
-    #undef wxPG_FL_NOSTATUSBARHELP
-    #undef wxPG_FL_SCROLLED
-    #undef wxPG_FL_CUR_USES_CUSTOM_IMAGE
-    #undef wxPG_FL_PRIMARY_FILLS_ENTIRE
-    #undef wxPG_FL_VALUE_MODIFIED
-    #undef wxPG_FL_MOUSE_INSIDE
-    #undef wxPG_FL_FOCUSED
-    #undef wxPG_FL_MOUSE_CAPTURED
-    #undef wxPG_FL_INITIALIZED
-    #undef wxPG_FL_ACTIVATION_BY_CLICK
-    #undef wxPG_ICON_WIDTH
-    #undef wxPG_USE_RENDERER_NATIVE
-#endif
 
 // -----------------------------------------------------------------------
 
